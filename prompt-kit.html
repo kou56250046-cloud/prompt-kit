@@ -1,0 +1,1327 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'">
+<title>プロンプト集 for Gemini</title>
+<style>
+:root {
+  --bg: #f6f4ef;
+  --panel: #ffffff;
+  --ink: #1f2328;
+  --sub: #5b6169;
+  --faint: #6b7077;
+  --line: #e3dfd6;
+  --accent: #0f6b66;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3f1ef;
+  --warn: #9a4b00;
+  --warn-soft: #fff3e0;
+  --star: #8a5d00;
+  --code: #f3f1ec;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.7 "Yu Gothic UI", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+  display: flex; flex-direction: column;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+/* フォーカスは濃い輪郭＋白の縁取りで、どの背景でも 3:1 以上にする */
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px #fff; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ヘッダー */
+.top {
+  display: flex; align-items: center; gap: 24px;
+  padding: 0 24px; height: 60px; flex: none;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.brand { margin: 0; font-weight: 700; font-size: 17px; white-space: nowrap; }
+.brand small { font-weight: 400; color: var(--sub); margin-left: 6px; font-size: 13px; }
+.tabs { display: flex; gap: 4px; height: 100%; }
+.tabs button {
+  border: 0; background: none; padding: 0 16px; height: 100%; white-space: nowrap;
+  color: var(--sub); border-bottom: 3px solid transparent; font-weight: 600;
+}
+.tabs button[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tabs button:hover { color: var(--ink); }
+.top .spacer { flex: 1; }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
+  padding: 7px 14px; font-weight: 600; font-size: 14px; white-space: nowrap;
+}
+.btn:hover { border-color: #c9c3b6; background: #faf9f6; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { background: #0b5753; }
+.btn.small { padding: 3px 10px; font-size: 13px; }
+.btn.danger { color: #a12a2a; }
+.btn.danger.armed { background: #a12a2a; color: #fff; border-color: #a12a2a; }
+.btn.link { border: 0; background: none; color: var(--accent); padding: 4px 0; text-decoration: underline; }
+
+/* レイアウト */
+main { flex: 1; min-height: 0; }
+.tab { height: 100%; }
+.tab[hidden] { display: none; }
+.split { display: grid; grid-template-columns: 320px 1fr; height: 100%; }
+.side {
+  border-right: 1px solid var(--line); background: #fbfaf7;
+  overflow-y: auto; padding: 16px 12px 40px;
+}
+.content { overflow-y: auto; padding: 28px 40px 80px; height: 100%; }
+.content-inner { max-width: 860px; }
+
+/* サイドの一覧 */
+.search {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); margin-bottom: 12px;
+}
+.group { margin-bottom: 6px; }
+.group > summary, .group-title {
+  list-style: none; cursor: pointer; font-weight: 700; font-size: 13px; color: var(--sub);
+  padding: 6px 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
+}
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary::before { content: "▸"; margin-right: 6px; transition: transform .15s; }
+.group[open] > summary::before { transform: rotate(90deg); }
+.group > summary span:first-child { flex: 1; }
+.group-title { cursor: default; }
+.count { font-weight: 400; color: var(--faint); }
+.item {
+  display: block; width: 100%; text-align: left; border: 0; background: none;
+  padding: 7px 10px 7px 24px; border-radius: 8px; line-height: 1.45;
+}
+.item:hover { background: #f0ede6; }
+.item[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); }
+.item[aria-current="true"] .t { font-weight: 700; color: #0b4f4b; }
+.item .t { display: block; font-weight: 600; font-size: 14px; }
+.item .s { display: block; font-size: 13px; color: var(--sub); margin-top: 1px; }
+.item .fav { color: var(--star); margin-left: 4px; }
+.badge.gem { background: #ece8f7; color: #4b3a8a; }
+.item .badge.gem { margin-left: 6px; font-size: 12px; font-weight: 600; }
+.more-favs { margin: 0 0 6px 24px; font-size: 13px; }
+.empty { color: var(--sub); font-size: 14px; padding: 8px; }
+
+/* 詳細 */
+.back { display: none; }
+.crumb { font-size: 13px; color: var(--sub); }
+.title-row { display: flex; align-items: flex-start; gap: 12px; margin: 2px 0 4px; }
+.title-row h2 { margin: 0; font-size: 24px; line-height: 1.4; flex: 1; }
+.title-row h2:focus { outline: none; box-shadow: none; }
+.star {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
+  padding: 4px 10px; font-size: 14px; color: var(--sub); white-space: nowrap;
+}
+.star[aria-pressed="true"] { color: var(--star); border-color: #e0c27a; background: #fff9e8; }
+.lead { color: var(--sub); margin: 0 0 12px; }
+.tip-line { margin: 0 0 22px; font-size: 14px; color: var(--sub); }
+.tip-line strong { color: var(--ink); }
+.chain-banner {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+  background: var(--accent-soft); border-radius: var(--radius); padding: 10px 16px; margin-bottom: 18px; font-size: 14px;
+}
+.chain-banner p { margin: 0; flex: 1; min-width: 240px; }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 18px;
+}
+.card h3 { margin: 0 0 14px; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+.card h3 .grow { flex: 1; }
+.num {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 13px; flex: none;
+}
+.field { margin-bottom: 14px; }
+.field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.badge {
+  display: inline-block; font-size: 12px; font-weight: 600; padding: 0 8px; border-radius: 999px;
+  margin-left: 6px; vertical-align: 1px; background: #eeebe4; color: var(--sub);
+}
+.badge.att { background: var(--accent-soft); color: var(--accent); }
+.badge.req { background: #fde8e8; color: #8f2424; }
+.field input, .field textarea, .dialog-body input, .dialog-body textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff;
+}
+.field textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+.field input:focus, .field textarea:focus { border-color: var(--accent); }
+.my-box { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; margin-top: 4px; }
+.my-box summary { cursor: pointer; font-size: 14px; color: var(--sub); font-weight: 600; }
+.my-box .field { margin: 10px 0 0; }
+.hint { font-size: 13px; color: var(--sub); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+.toolbar .grow { flex: 1; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.warn {
+  background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 12px;
+  font-size: 14px; margin-bottom: 10px;
+}
+.preview {
+  white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 420px; overflow: auto;
+  background: var(--code); border-radius: 8px; padding: 14px 16px; font-size: 13.5px; line-height: 1.65;
+  font-family: "BIZ UDGothic", "Yu Gothic UI", "Meiryo", monospace;
+}
+.chars { font-size: 13px; color: var(--sub); }
+details.more > summary { cursor: pointer; font-weight: 700; }
+details.more[open] > summary { margin-bottom: 10px; }
+.fu { border-top: 1px solid var(--line); padding: 10px 0; }
+.fu:first-of-type { border-top: 0; }
+.fu-head { display: flex; align-items: center; gap: 10px; }
+.fu-head strong { flex: 1; font-size: 14px; }
+.fu p { margin: 4px 0 0; font-size: 14px; color: var(--sub); white-space: pre-wrap; }
+.fu-label { font-size: 13px; font-weight: 700; color: var(--sub); margin: 10px 0 2px; }
+.tips { margin: 0; white-space: pre-wrap; }
+.next-list { display: flex; flex-direction: column; gap: 8px; }
+.next {
+  display: flex; align-items: center; gap: 10px; text-align: left; width: 100%;
+  border: 1px solid var(--line); background: #fbfaf7; border-radius: 8px; padding: 10px 14px;
+}
+.next:hover { border-color: var(--accent); }
+.next .via { font-size: 13px; color: var(--sub); display: block; }
+.next .arrow { color: var(--accent); font-weight: 700; }
+
+/* 連鎖 */
+.chain { margin-bottom: 22px; }
+.chain h3 { margin: 0 0 4px; font-size: 18px; }
+.chain .desc { color: var(--sub); margin: 0 0 14px; white-space: pre-wrap; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.steps li { display: flex; align-items: center; gap: 8px; }
+.steps li + li::before { content: "→"; color: var(--accent); font-weight: 700; }
+.step {
+  border: 1px solid var(--line); background: #fbfaf7; border-radius: 8px; padding: 8px 12px;
+  text-align: left; max-width: 220px; line-height: 1.4;
+}
+.step:hover { border-color: var(--accent); }
+.step .n { font-size: 13px; color: var(--accent); font-weight: 700; display: block; }
+.step .t { font-weight: 600; font-size: 14px; }
+
+/* 使い方 */
+.toc ol { margin: 0; padding-left: 20px; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--ink); text-decoration: none; }
+.toc a:hover { color: var(--accent); text-decoration: underline; }
+.guide h2 { font-size: 24px; margin: 0 0 8px; }
+.guide h3 { font-size: 19px; margin: 36px 0 10px; border-top: 1px solid var(--line); padding-top: 22px; }
+.guide h4 { font-size: 16px; margin: 20px 0 6px; }
+.guide code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+.guide .code { background: var(--code); padding: 12px 14px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; }
+.guide .note { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; }
+.guide li { margin: 3px 0; }
+
+/* フロー図（使い方） */
+.flow { margin: 16px 0 20px; }
+.flow figcaption { font-weight: 700; font-size: 14px; color: var(--sub); margin-bottom: 8px; }
+.flow ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 22px; max-width: 600px; }
+.flow-step {
+  position: relative; display: flex; gap: 12px; align-items: flex-start;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+  box-shadow: var(--shadow); line-height: 1.5;
+}
+.flow-step + .flow-step::before {
+  content: "↓"; position: absolute; left: 22px; top: -22px; line-height: 22px;
+  color: var(--accent); font-weight: 700; font-size: 16px;
+}
+.flow-decision { border: 1.5px dashed #c08a2d; background: #fffaf0; }
+.flow-n {
+  flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+}
+.flow-q { background: #a06a10; }
+.flow-body strong { display: block; font-size: 14px; }
+.flow-d { display: block; font-size: 13px; color: var(--sub); }
+
+/* Gem 用 */
+.gem-card > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.gem-card > summary::-webkit-details-marker { display: none; }
+.gem-card > summary::before { content: "▸"; color: var(--sub); transition: transform .15s; }
+.gem-card[open] > summary::before { transform: rotate(90deg); }
+.gem-card[open] > summary { margin-bottom: 12px; }
+.gem-title { font-weight: 700; font-size: 16px; }
+.gem-sub { flex-basis: 100%; padding-left: 18px; }
+.gem-steps { margin: 0 0 6px; padding-left: 22px; font-size: 14px; }
+.send-list { margin: 0; padding-left: 22px; font-size: 14px; }
+
+/* 自分の情報 */
+dialog { border: 0; border-radius: 14px; padding: 0; width: min(560px, 92vw); max-height: 90vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog[open] { display: flex; }
+dialog form { display: flex; flex-direction: column; min-height: 0; width: 100%; }
+dialog::backdrop { background: rgba(20, 24, 28, .4); }
+.dialog-head { padding: 18px 22px 0; flex: none; }
+.dialog-head h2 { margin: 0; font-size: 19px; }
+.dialog-body { overflow-y: auto; min-height: 0; flex: 1; padding: 10px 22px; }
+.dialog-body .field label { font-size: 14px; }
+.dialog-body textarea { min-height: 70px; }
+.dialog-foot { flex: none; display: flex; gap: 10px; padding: 12px 22px 20px; align-items: center; border-top: 1px solid var(--line); }
+.dialog-foot .grow { flex: 1; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
+  background: #1f2328; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 860px) {
+  .top { flex-wrap: wrap; height: auto; gap: 0 12px; padding: 8px 12px 0; }
+  .brand small { display: none; }
+  .tabs { order: 3; width: 100%; height: 44px; }
+  .tabs button { flex: 1; padding: 0 6px; }
+  .split { grid-template-columns: 1fr; height: auto; }
+  .tab { height: auto; }
+  main { overflow-y: auto; }
+  .side { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
+  .content { padding: 20px 16px 60px; height: auto; overflow: visible; }
+  .back { display: inline-block; margin-bottom: 8px; min-height: 44px; }
+  input, textarea { font-size: 16px; }
+  .btn.small, .star, .item, .group > summary { min-height: 44px; }
+  .dialog-foot { flex-direction: column; align-items: stretch; }
+  .dialog-foot .grow { display: none; }
+  #settings-save { order: 1; }
+  #settings-cancel { order: 2; }
+  #clear-storage { order: 3; margin-top: 10px; }
+  .kbd-hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 class="brand">プロンプト集<small>for Gemini・66件</small></h1>
+  <nav class="tabs" aria-label="画面の切り替え">
+    <button type="button" id="tab-btn-prompts" data-tab="prompts" aria-current="page">プロンプト</button>
+    <button type="button" id="tab-btn-chains" data-tab="chains">連鎖</button>
+    <button type="button" id="tab-btn-guide" data-tab="guide">使い方</button>
+  </nav>
+  <div class="spacer"></div>
+  <button class="btn" id="save-html" type="button" title="このページを prompt-kit.html として保存します（入力した素材は入りません）">HTML を保存</button>
+  <button class="btn" id="open-settings" type="button">自分の情報</button>
+</header>
+
+<main>
+  <section class="tab split" id="tab-prompts" aria-label="プロンプト">
+    <aside class="side">
+      <input class="search" id="search" type="search" placeholder="検索（例: 議事録）" aria-label="プロンプトを検索（/ キーで移動）">
+      <div id="nav"></div>
+    </aside>
+    <div class="content"><div class="content-inner" id="detail"></div></div>
+  </section>
+
+  <section class="tab" id="tab-chains" aria-label="連鎖" hidden>
+    <div class="content"><div class="content-inner">
+      <p class="crumb">連鎖</p>
+      <div class="title-row"><h2>続けて使う順番</h2></div>
+      <p class="lead">前のプロンプトで得た出力を、次のプロンプトの素材欄に貼って進めます。手順の名前を押すと、そのプロンプトを開きます。</p>
+      <div id="chains"></div>
+    </div></div>
+  </section>
+
+  <section class="tab split" id="tab-guide" aria-label="使い方" hidden>
+    <aside class="side toc" aria-label="目次">
+      <div class="group-title"><span>目次</span></div>
+      <ol><li><a href="#/guide/g-1">はじめての使い方</a></li><li><a href="#/guide/g-2">ファイルを添付して渡す</a></li><li><a href="#/guide/g-3">結果を .md ファイルで残す</a></li><li><a href="#/guide/g-4">自分の情報を入れておく</a></li><li><a href="#/guide/g-5">Gem に登録して毎回の手間をなくす</a></li><li><a href="#/guide/g-6">Google スライドで資料を作る</a></li><li><a href="#/guide/g-7">うまくいかないとき</a></li><li><a href="#/guide/g-8">連鎖を使う</a></li><li><a href="#/guide/g-9">良いプロンプトの型</a></li><li><a href="#/guide/g-10">自分でプロンプトを足す</a></li></ol>
+    </aside>
+    <div class="content" id="guide-scroll"><div class="content-inner guide">
+      <h2>使い方</h2>
+<p>このプロンプト集は、Gemini に渡す指示を「型」にしたものです。素材を入れてコピーし、Gemini に貼るだけで、毎回同じ形の出力が得られます。</p>
+<p class="note">このファイルはネットにつながっていなくても動きます。入力した素材はどこにも送られず、画面を閉じると消えます。</p>
+<h3 id="g-1">はじめての使い方</h3>
+<figure class="flow"><figcaption>基本の流れ</figcaption><ol aria-label="基本の流れ"><li class="flow-step"><span class="flow-n" aria-hidden="true">1</span><span class="flow-body"><strong>選ぶ</strong><span class="flow-d">左の一覧からプロンプトを選ぶ。検索欄で「議事録」「スライド」などと探せる</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">2</span><span class="flow-body"><strong>入力する</strong><span class="flow-d">「1. 素材を入れる」に会議名や資料を入れる。長いものは空欄にして添付でもよい</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">3</span><span class="flow-body"><strong>コピーする</strong><span class="flow-d">「プロンプトをコピー」を押す（入力欄で Ctrl+Enter でも可）</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">4</span><span class="flow-body"><strong>貼って送る</strong><span class="flow-d">Gemini の入力欄に貼り付けて送信する</span></span></li><li class="flow-step flow-decision"><span class="flow-n flow-q" aria-hidden="true">?</span><span class="flow-body"><strong>出力は良い？</strong><span class="flow-d">足りなければ「3. 追い指示」をコピーして同じ会話に送る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">5</span><span class="flow-body"><strong>次へ進む</strong><span class="flow-d">「次に使う」があれば、出力を次のプロンプトの素材にする</span></span></li></ol></figure>
+<ol><li>左の一覧からプロンプトを選ぶ（上の検索欄で「議事録」「スライド」などと探せます。キーボードの / で検索欄へ移動）</li><li>「1. 素材を入れる」の欄に、会議名や資料の本文を入れる。入れた内容は下のプレビューにすぐ反映されます</li><li>「プロンプトをコピー」を押し（入力欄で Ctrl+Enter でも可）、Gemini の入力欄に貼り付けて送信する</li></ol>
+<p>出力を見て足りないところがあれば、「3. うまくいかないときの追い指示」から当てはまるものをコピーして、同じ会話に続けて送ります。</p>
+<p>よく使うプロンプトは「☆ お気に入りに追加」で一覧の上に出せます。一度コピーしたものは「最近コピーした」に並びます。</p>
+<h3 id="g-2">ファイルを添付して渡す</h3>
+<p>長い文字起こしや PDF・PowerPoint・画像は、貼り付けるより添付する方が確実です。</p>
+<figure class="flow"><figcaption>添付で渡すとき</figcaption><ol aria-label="添付で渡すとき"><li class="flow-step flow-decision"><span class="flow-n flow-q" aria-hidden="true">?</span><span class="flow-body"><strong>素材は長い・ファイル？</strong><span class="flow-d">短い文章なら、そのまま欄に貼る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">1</span><span class="flow-body"><strong>欄を空けておく</strong><span class="flow-d">「空欄なら添付を参照」の印が付いた欄は空欄のまま</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">2</span><span class="flow-body"><strong>コピーして貼る</strong><span class="flow-d">その欄は「（添付ファイルを参照）」と入る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">3</span><span class="flow-body"><strong>添付して送る</strong><span class="flow-d">Gemini の入力欄の「＋」からファイルを添付して送信する</span></span></li></ol></figure>
+<ol><li>「空欄なら添付を参照」の印が付いた欄は、空欄のままにする</li><li>プロンプトをコピーして Gemini に貼る（その欄は「（添付ファイルを参照）」と入ります）</li><li>Gemini の入力欄の「＋」からファイルを添付して送信する</li></ol>
+<ul><li>添付するファイルが2つ以上あるとき（新旧の比較など）は、ファイル名に「旧」「新」のように区別がつく言葉を入れてください</li><li>PowerPoint は PDF に書き出してから添付すると、読み取りが安定します</li><li>表のデータは Excel やスプレッドシートのまま添付すると、Gemini が計算して確かめられることがあります</li></ul>
+<h3 id="g-3">結果を .md ファイルで残す</h3>
+<p>議事録・文字起こし・確認事項のリスト・手順書など、文書として残すものは、Gemini に Markdown で出力させ、この画面で .md ファイルに保存できます。</p>
+<figure class="flow"><figcaption>.md で残す流れ</figcaption><ol aria-label=".md で残す流れ"><li class="flow-step"><span class="flow-n" aria-hidden="true">1</span><span class="flow-body"><strong>Markdown で出させる</strong><span class="flow-d">「Markdown（.md）で出力させる」がオンのままプロンプトをコピー（既定でオン）</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">2</span><span class="flow-body"><strong>Gemini に送る</strong><span class="flow-d">出力は ```markdown のコードブロック1つにまとまって返ってくる</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">3</span><span class="flow-body"><strong>出力をコピー</strong><span class="flow-d">コードブロック右上のコピーボタンでコピーする</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">4</span><span class="flow-body"><strong>ここに貼る</strong><span class="flow-d">プロンプトの画面の「Gemini の出力を .md で保存」に貼る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">5</span><span class="flow-body"><strong>保存する</strong><span class="flow-d">ファイル名を確かめて「.md で保存」。ブラウザのダウンロード先に保存される</span></span></li></ol></figure>
+<ul><li>対象は、一覧で文書を作るプロンプト（34件）です。メールや HTML、スライドの指示など、別の形で使うものには出ません</li><li>囲みの ```markdown ごと貼っても、保存するときに自動で外します。出力が「続き」で何回かに分かれたときは、全部まとめて貼れば1つのファイルになります</li><li>ファイル名は「議事録_20261118」のように、種類と今日の日付が最初から入っています。会議名などに書き換えてから保存してください</li><li>貼った出力はこの画面の中だけにあり、保存ボタンを押したときだけファイルになります</li><li>.md はメモ帳でも開けます。VS Code や Obsidian などで開くと、見出しや表が整って見えます</li></ul>
+<h3 id="g-4">自分の情報を入れておく</h3>
+<p>右上の「自分の情報」に、氏名・会社・部署・役職・業務の前提・文体を入れて保存すると、メールの署名や報告書の書き手としてプロンプトに自動で入ります。</p>
+<ul><li>空欄の項目は使われません</li><li>保存先はこのブラウザの中だけです。ほかの人や外部には送られません</li><li>プロンプトの画面の「自分の情報（このプロンプトだけ変えられます）」で、その場だけ変えることもできます</li><li>「保存した値をすべて消す」で、お気に入り・最近使ったもの・自分の情報をまとめて消せます</li></ul>
+<h3 id="g-5">Gem に登録して毎回の手間をなくす</h3>
+<p>Gem は、Gemini に「いつもの指示」を覚えさせておく機能です。登録しておけば、毎回プロンプトを貼らずに、素材を送るだけで同じ作業をしてくれます。</p>
+<figure class="flow"><figcaption>普通に使うか、Gem に登録するか</figcaption><ol aria-label="普通に使うか、Gem に登録するか"><li class="flow-step flow-decision"><span class="flow-n flow-q" aria-hidden="true">?</span><span class="flow-body"><strong>毎週のように使う？</strong><span class="flow-d">たまにしか使わないなら、普通にプロンプトをコピーして使う</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">1</span><span class="flow-body"><strong>Gem 用をコピー</strong><span class="flow-d">プロンプトの画面の「Gem に登録して使う場合」で「Gem 用をコピー」を押す</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">2</span><span class="flow-body"><strong>Gem を作る</strong><span class="flow-d">Gemini の左のメニューから Gem の管理画面を開き、新しい Gem を作る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">3</span><span class="flow-body"><strong>貼って保存</strong><span class="flow-d">名前（例: 議事録係）を付け、指示の欄に貼って保存する</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">4</span><span class="flow-body"><strong>素材だけ送る</strong><span class="flow-d">以後はその Gem を開き、「Gem に送るもの」に書かれた素材を貼る・添付する</span></span></li></ol></figure>
+<ol><li>使いたいプロンプトを開き、「Gem に登録して使う場合」の「Gem 用をコピー」を押す</li><li>Gemini の画面の左のメニューから Gem の管理画面を開き、新しい Gem を作る</li><li>名前（例: 議事録係）を付け、指示の欄に貼り付けて保存する</li><li>以後はその Gem を開いて、文字起こしや資料を貼る・添付するだけで使えます</li></ol>
+<p>普通のプロンプトと Gem 用の指示は、中身が少し違います。</p>
+<ul><li>普通のプロンプト: 入力欄に入れた素材が、指示の中に差し込まれます。毎回コピーして貼ります</li><li>Gem 用の指示: 素材の場所が「利用者が送る◯◯」になっていて、素材は含まれません。一度登録すれば、あとは素材だけを送ります</li></ul>
+<ul><li>画面の名前や場所は、Gemini の更新で変わることがあります</li><li>Gem に向いているのは、毎週のように使うものです。一覧と各プロンプトの画面に「Gem 向き」の印が付いています</li><li>Gem 用の指示に入るのは自分の情報だけです。会議名などの入力欄の内容は入りません</li></ul>
+<h3 id="g-6">Google スライドで資料を作る</h3>
+<p>スライドの中の Gemini は、長い指示をまとめて渡すより、1枚ずつ短く頼む方がうまくいきます。そこで2段構えにしています。</p>
+<figure class="flow"><figcaption>スライドを作る流れ</figcaption><ol aria-label="スライドを作る流れ"><li class="flow-step"><span class="flow-n" aria-hidden="true">1</span><span class="flow-body"><strong>骨子を作る</strong><span class="flow-d">Gemini アプリで「素材 → スライド骨子」</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">2</span><span class="flow-body"><strong>流れを確かめる</strong><span class="flow-d">「ストーリーの診断」でタイトルだけで話が通るか見る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">3</span><span class="flow-body"><strong>1枚ずつの指示にする</strong><span class="flow-d">「骨子 → スライドの Gemini 用の指示」</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">4</span><span class="flow-body"><strong>スライドで作る</strong><span class="flow-d">Google スライドの Gemini のサイドパネルに1枚ずつ貼る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">5</span><span class="flow-body"><strong>発表の準備</strong><span class="flow-d">「発表者ノートと想定問答」</span></span></li></ol></figure>
+<ol><li>Gemini アプリで「素材 → スライド骨子」を使い、構成を作る</li><li>必要なら「ストーリーの診断」で、タイトルだけで話が通るかを確かめる</li><li>「骨子 → スライドの Gemini 用の指示」で、1枚ごとの短い指示を作る</li><li>Google スライドを開き、画面右上の Gemini のボタンからサイドパネルを開いて、1枚ずつ指示を貼る</li><li>グラフはスプレッドシートで作って貼る方が、数字が正確です</li></ol>
+<p>すでにある資料を直すときは、「既存資料のブラッシュアップ診断」→「スライド1枚の改善指示」の順に使います。連鎖タブの「既存のスライドを直す」も参考にしてください。</p>
+<p class="note">Google スライドの Gemini が使えるかどうかは、会社の Google Workspace の契約によります。</p>
+<h3 id="g-7">うまくいかないとき</h3>
+<figure class="flow"><figcaption>直し方の順番</figcaption><ol aria-label="直し方の順番"><li class="flow-step"><span class="flow-n" aria-hidden="true">1</span><span class="flow-body"><strong>追い指示を送る</strong><span class="flow-d">当てはまる追い指示を、同じ会話に続けて送る</span></span></li><li class="flow-step flow-decision"><span class="flow-n flow-q" aria-hidden="true">?</span><span class="flow-body"><strong>直った？</strong><span class="flow-d">直れば終わり</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">2</span><span class="flow-body"><strong>出力例をオンにする</strong><span class="flow-d">「出力例を含める」がオフならオンにしてやり直す</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">3</span><span class="flow-body"><strong>新しい会話でやり直す</strong><span class="flow-d">前のやりとりに引きずられていることがある</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">4</span><span class="flow-body"><strong>素材を分ける</strong><span class="flow-d">長い素材は区切って、何回かに分けて渡す</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">5</span><span class="flow-body"><strong>突き合わせる</strong><span class="flow-d">「出力の自己検証」で素材と出力を比べる</span></span></li></ol></figure>
+<p>各プロンプトの画面の「3. うまくいかないときの追い指示」に、そのプロンプト用と共通のものがあります。よく使う共通のもの:</p>
+<ul><li>出力が長い → 「長すぎる」</li><li>素材に無いことが書かれている → 「推測が混じっている」「根拠を示してほしい」</li><li>表や見出しが崩れた → 「形式が崩れた」</li><li>途中で止まった → 「途中で切れた」</li><li>大事なことが抜けている → 「抜けがある」</li><li>どこにでも当てはまる内容になる → 「一般論になっている」</li></ul>
+<p>それでも直らないときは、次を試してください。</p>
+<ul><li>新しい会話で、もう一度最初からやり直す（前のやりとりに引きずられていることがあります）</li><li>「出力例を含める」がオフになっていたらオンにする</li><li>素材を短く区切って、何回かに分けて渡す</li><li>「出力の自己検証」で、元の素材と出力を突き合わせる</li></ul>
+<h3 id="g-8">連鎖を使う</h3>
+<figure class="flow"><figcaption>連鎖の例: 会議を一通り回す</figcaption><ol aria-label="連鎖の例: 会議を一通り回す"><li class="flow-step"><span class="flow-n" aria-hidden="true">1</span><span class="flow-body"><strong>会議の準備</strong><span class="flow-d">論点・想定反論・決めたいことを用意</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">2</span><span class="flow-body"><strong>アジェンダ作成</strong><span class="flow-d">時間配分つきの議題を作って招集する</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">3</span><span class="flow-body"><strong>文字起こしの整形</strong><span class="flow-d">誤変換と言いよどみを直す</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">4</span><span class="flow-body"><strong>文字起こし → 議事録</strong><span class="flow-d">決定事項・ToDo・保留を表にする</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">5</span><span class="flow-body"><strong>フォローアップメール</strong><span class="flow-d">決定事項と ToDo を参加者に送る</span></span></li><li class="flow-step"><span class="flow-n" aria-hidden="true">6</span><span class="flow-body"><strong>会議の振り返り</strong><span class="flow-d">決まらなかった理由と次回の進め方</span></span></li></ol></figure>
+<p>連鎖タブには、続けて使うと効果の高い順番をまとめています。前のプロンプトの出力を、次のプロンプトの素材欄に貼って進めます。各プロンプトの画面の下にも「次に使う」が出ます。</p>
+<p>同じ Gemini の会話の中で続けて送っても構いません。その場合は、素材欄を空欄にして「前の出力を素材にしてください」と書き足してください。</p>
+<h3 id="g-9">良いプロンプトの型</h3>
+<p>このプロンプト集のプロンプトは、すべて次の型で書いています。自分で指示を書くときもこの型にすると、出力がぶれにくくなります。</p>
+<ol><li><strong>役割</strong>: 誰として振る舞うか（例: 正確さを最優先する議事録係）</li><li><strong>目的</strong>: 何のための作業か</li><li><strong>入力</strong>: 素材を「&quot;&quot;&quot;」で囲んで渡す</li><li><strong>手順</strong>: 番号付きで、考える順番を指定する</li><li><strong>出力形式</strong>: 見出しと表の列を決めておく</li><li><strong>守ること</strong>: 「素材に無いことは推測で埋めず『不明』と書く」を必ず入れる</li><li><strong>最後に確認</strong>: 出す前に自分で点検させる</li></ol>
+<p>思いついた指示を、この型に直してほしいときは「雑な指示 → 良いプロンプト」を使ってください。</p>
+<h3 id="g-10">自分でプロンプトを足す</h3>
+<p>プロンプトは <code>prompts/</code> フォルダの中に、1件1ファイルの Markdown で入っています。ファイルを足して作り直すと、この画面に出ます（作り直しには Node.js が必要です）。</p>
+<pre class="code">---
+id: my-prompt
+title: 画面に出る名前
+category: meeting
+order: 10
+summary: 一覧に出る1行の説明
+vars:
+  - { key: doc, label: 資料, multiline: true, attachable: true }
+  - { key: reader, label: 読む人, optional: true }
+---
+## プロンプト
+（本文。{{doc}} のように欄の内容を差し込む。{{my.profile}} で自分の情報）
+
+## 使い方のコツ
+（1〜3行）
+
+## 出力例
+（任意。期待する出力の見本）
+
+## 追い指示
+### 見出し
+（任意。続けて送る定型文）</pre>
+<ul><li><code>category</code> は meeting / reading / ppt / html / writing / thinking / planning / numbers / manual / image / research / notice / training / translate / meta のどれか</li><li><code>recommend_gem: true</code> を書くと「Gem 向き」の印が付く</li><li><code>md_name: 議事録</code> を書くと Markdown で出力させる指示と「.md で保存」が付く（ファイル名の頭になる）。このとき本文と出力例に ``` は使えない</li><li><code>order</code> はカテゴリの中での並び順（小さいほど上。省くと最後）</li><li>欄の設定: <code>multiline: true</code> で複数行、<code>optional: true</code> で任意、<code>attachable: true</code> で「空欄なら添付を参照」</li><li>欄の説明に半角のカンマは使えません（読点「、」を使います）</li><li>宣言した欄を本文で使っていない、本文の <code>{{…}}</code> が宣言されていない、といった誤りがあると、作り直しのときにエラーで知らせます</li><li>作り直しは、prompt-kit フォルダで <code>node build.mjs</code> を実行します</li></ul>
+    </div></div>
+  </section>
+</main>
+
+<dialog id="settings" aria-labelledby="settings-title">
+  <form method="dialog" id="settings-form">
+    <div class="dialog-head">
+      <h2 id="settings-title">自分の情報</h2>
+      <p class="hint">ここに入れた内容は、プロンプトの「書き手の情報」や文体の指定に自動で入ります。このブラウザにだけ保存されます。空欄の項目は使いません。</p>
+    </div>
+    <div class="dialog-body" id="settings-fields"></div>
+    <div class="dialog-foot">
+      <button class="btn danger" type="button" id="clear-storage">保存した値と入力をすべて消す</button>
+      <span class="grow"></span>
+      <button class="btn" type="button" id="settings-cancel">閉じる</button>
+      <button class="btn primary" type="submit" id="settings-save">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="application/json" id="data">{"categories":[{"id":"meeting","label":"会議・議事録"},{"id":"reading","label":"資料の読解"},{"id":"notebooklm","label":"NotebookLM・質問箱"},{"id":"ppt","label":"PowerPoint・スライド"},{"id":"html","label":"HTML・UI"},{"id":"writing","label":"文書・メール"},{"id":"thinking","label":"思考支援"},{"id":"planning","label":"段取り"},{"id":"numbers","label":"表・数値"},{"id":"manual","label":"手順書・引き継ぎ"},{"id":"image","label":"画像（読み取り・生成）"},{"id":"research","label":"調査"},{"id":"notice","label":"告知・案内"},{"id":"training","label":"研修・勉強会"},{"id":"translate","label":"翻訳・英文"},{"id":"meta","label":"プロンプトを良くする"}],"prompts":[{"id":"meeting-prep","title":"会議の準備","category":"meeting","summary":"議題と資料から、決めたいこと・論点・想定反論・事前確認を1枚にする","recommendGem":false,"mdName":"会議の準備","order":1,"vars":[{"key":"topic","label":"会議の議題・目的","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 来期の販促予算の配分を決める"},{"key":"materials","label":"事前資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"position","label":"自分の立場・言いたいこと","multiline":true,"optional":true,"attachable":false,"placeholder":""},{"key":"attendees","label":"参加者と関心ごと","multiline":true,"optional":true,"attachable":false,"placeholder":"例: 部長（費用対効果を重視）、営業課長（現場の負担を気にする）"}],"prompt":"# 役割\nあなたは会議の段取りに強い参謀です。私が会議で迷わず発言し、時間内に結論を出せるように準備を手伝ってください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 会議の議題・目的\n{{topic}}\n\n## 事前資料\n\"\"\"\n{{materials}}\n\"\"\"\n\n## 自分の立場・言いたいこと\n{{position}}\n\n## 参加者と関心ごと\n{{attendees}}\n\n# 手順\n1. 議題と資料から、この会議で「決めるべきこと」を特定する\n2. 決めるために答えを出す必要がある論点を洗い出す\n3. 論点ごとに選択肢と、私の立場から推す案とその根拠を整理する\n4. 参加者の関心ごとから、出そうな反論と答え方を考える\n5. 会議の前に確かめておくべきことを挙げる\n\n# 出力形式\n## 1. この会議のゴール\n「〇〇を決める」の形で1〜2行。\n\n## 2. 論点\n| No | 論点 | 選択肢 | 推す案 | 根拠 | 資料の該当箇所 |\n|---|---|---|---|---|---|\n\n## 3. 想定される反論と答え方\n| 反論 | 言いそうな人 | 答え方（30秒で言える長さ） | 用意する根拠 |\n|---|---|---|---|\n\n## 4. 会議の前に確かめること\n- 誰に・何を・いつまでに\n\n## 5. 冒頭の切り出し\n会議の最初に私が言う一言（30秒、150字程度）。\n\n# 守ること\n- 資料に無いことは推測で埋めず「不明」と書く\n- 根拠には資料の該当箇所（見出しやページ、短い引用）を示す\n- 一般論ではなく、この資料と議題に即して書く\n\n# 最後に確認\n出力の前に、ゴールが「決める」形で書かれているか、論点がゴールに必要なものだけか、反論ごとに答え方があるかを確かめ、足りなければ直してから出す。","tips":"自分の立場を書くと、推す案と反論の答え方が具体的になります。\n参加者の関心ごとは一言でも効きます（「部長はコスト重視」など）。","example":"## 1. この会議のゴール\n来期の販促予算 1,200 万円を、Web 広告と展示会にどう配分するかを決める。\n\n## 2. 論点\n| No | 論点 | 選択肢 | 推す案 | 根拠 | 資料の該当箇所 |\n|---|---|---|---|---|---|\n| 1 | 展示会を続けるか | 継続 / 縮小 / 中止 | 縮小（2回→1回） | 1回あたりの商談数が前年比 -40% | p.4「展示会実績」 |\n\n## 3. 想定される反論と答え方\n| 反論 | 言いそうな人 | 答え方 | 用意する根拠 |\n|---|---|---|---|\n| 展示会をやめると既存顧客との接点が減る | 営業課長 | 残す1回を既存顧客の多い東京会場にし、接点は維持します | 来場者の既存顧客比率（不明・要確認） |","gem":"","followups":[{"title":"反論をもっと厳しく","text":"いちばん強い反対意見を言う人になりきって、反論を3つ追加してください。答え方が苦しくなるものを優先してください。"},{"title":"資料が足りないと言われた","text":"この会議までに追加で用意すべきデータを、作る手間が小さい順に並べてください。"}]},{"id":"agenda","title":"アジェンダ作成","category":"meeting","summary":"目的と話したいことから、時間配分つきの議題案を作る","recommendGem":false,"mdName":"アジェンダ","order":2,"vars":[{"key":"purpose","label":"会議の目的","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 新システム導入の可否を決める"},{"key":"duration","label":"会議の時間","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 60分"},{"key":"topics","label":"話したいこと","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"attendees","label":"参加者","multiline":true,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは会議の進行役です。時間内にゴールへ着くアジェンダを作ってください。\n\n# 入力\n## 会議の目的\n{{purpose}}\n\n## 会議の時間\n{{duration}}\n\n## 話したいこと\n\"\"\"\n{{topics}}\n\"\"\"\n\n## 参加者\n{{attendees}}\n\n# 手順\n1. 目的から、会議の終わりに出ていてほしい成果物（決定・合意・役割分担など）を決める\n2. 話したいことを「共有」「議論」「決定」に分ける\n3. 決定が要る議題を前半に置き、共有だけのものは事前の資料配布やチャットで済ませられないか検討する\n4. 合計が会議の時間に収まるよう配分する。最後に5分以上の「決定事項と ToDo の確認」を入れる\n\n# 出力形式\n## 会議のゴール\n1行。\n\n## アジェンダ\n| 時間 | 議題 | 種類（共有・議論・決定） | 進め方 | 担当 | 事前準備 |\n|---|---|---|---|---|---|\n\n## 会議の前に配るもの\n- 資料と、読んでおいてほしい点\n\n## 会議から外した方がよい議題\n- 理由と代わりの手段（なければ「なし」）\n\n# 守ること\n- 時間の合計を会議の時間と一致させる\n- 担当が分からない議題は「不明」と書く\n- 入力に無い議題を勝手に足さない（足した方がよいものは「外した方がよい議題」の後に提案として書く）\n\n# 最後に確認\n時間の合計、決定の議題が前半にあるか、最後の確認の時間があるかを確かめてから出す。","tips":"話したいことは思いつくまま箇条書きで構いません。\n出力のアジェンダはそのまま招集メールに貼れます。","example":"## 会議のゴール\n新システムを来期に導入するかどうかを決め、決まった場合の担当を割り当てる。\n\n## アジェンダ\n| 時間 | 議題 | 種類 | 進め方 | 担当 | 事前準備 |\n|---|---|---|---|---|---|\n| 0:00-0:05 | 目的と進め方の確認 | 共有 | 司会が説明 | 司会 | なし |\n| 0:05-0:30 | 導入の可否 | 決定 | 比較表を見て賛否を一人ずつ | 情シス 田中 | 比較表を前日配布 |\n| 0:55-1:00 | 決定事項と ToDo の確認 | 決定 | 画面に議事録を映して読み上げ | 書記 | なし |","gem":"","followups":[{"title":"時間が足りない","text":"会議の時間を半分にするとしたら、何を削り、何を事前共有に回すかを示して、アジェンダを作り直してください。"}]},{"id":"transcript-clean","title":"文字起こしの整形","category":"meeting","summary":"誤変換・言いよどみを直し、話者を整理する。要約はしない","recommendGem":true,"mdName":"文字起こし","order":3,"vars":[{"key":"transcript","label":"文字起こし","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"speakers","label":"話者の対応","multiline":true,"optional":true,"attachable":false,"placeholder":"例: 話者1=田中（営業）、話者2=佐藤（企画）"},{"key":"glossary","label":"用語・固有名詞","multiline":true,"optional":true,"attachable":false,"placeholder":"例: ぶんせきや（社名）、KPI、〇〇プロジェクト"}],"prompt":"# 役割\nあなたは会議の文字起こしを校正する編集者です。内容を変えずに、読める文章に整えてください。\n\n# 目的\n自動文字起こしの誤変換・言いよどみ・細切れの行を整え、後で議事録を作る素材にする。**要約はしない。**\n\n# 入力\n## 文字起こし\n\"\"\"\n{{transcript}}\n\"\"\"\n\n## 話者の対応\n{{speakers}}\n\n## 用語・固有名詞\n{{glossary}}\n\n# 手順\n1. 話者の対応があれば、話者名を置き換える\n2. 「えー」「あのー」「なんか」などの言いよどみと、同じ語の言い直しを取り除く\n3. 同じ話者の細切れの発言を1つの段落にまとめる\n4. 明らかな誤変換を直す。用語・固有名詞の一覧があれば、それに合わせる\n5. 直す自信がない語は直さず、`[?元の語]` と印を付ける\n\n# 出力形式\n**話者名**（時刻があれば時刻）: 発言\n\nの形で、発言順に全文を出す。最後に次の表を付ける。\n\n## 判断が必要な箇所\n| 箇所（話者と発言の冒頭） | 元の語 | 候補 | 理由 |\n|---|---|---|---|\n\n# 守ること\n- 発言を削らない・要約しない・順番を変えない\n- 意味が変わる修正をしない。迷ったら直さず印を付ける\n- 話者が分からない発言は **不明** とする\n- 出力が長くて一度に出し切れないときは、区切りのよい所で止めて「続きは『続き』と送ってください」と書く\n\n# 最後に確認\n元の発言が抜けていないか、要約していないかを確かめてから出す。","tips":"長い文字起こしはファイルで添付する方が確実です。\n用語の一覧を入れると、社名や製品名の誤変換が大きく減ります。\nこの出力を「文字起こし → 議事録」の素材に使うと、議事録の精度が上がります。","example":"**田中**（10:02）: 展示会の件ですが、去年は商談につながったのが12件で、一昨年の半分くらいでした。\n\n**佐藤**（10:03）: その12件のうち、受注まで行ったのは何件ですか。\n\n**田中**（10:03）: 3件です。[?ぶんせき屋]さん経由の紹介が1件あります。\n\n## 判断が必要な箇所\n| 箇所 | 元の語 | 候補 | 理由 |\n|---|---|---|---|\n| 田中 10:03「3件です」 | ぶんせき屋 | ぶんせきや（社名） | 用語一覧に近い表記がある |","gem":"","followups":[{"title":"要約されてしまった","text":"要約せずに、元の発言をすべて残した形でやり直してください。削ったのは言いよどみと言い直しだけにしてください。"},{"title":"話者が混ざっている","text":"発言の内容（役職・担当の話題）から話者を推定し直してください。推定した箇所には（推定）と付けてください。"}]},{"id":"minutes","title":"文字起こし → 議事録","category":"meeting","summary":"決定事項・ToDo（担当・期限）・保留を表で出す","recommendGem":true,"mdName":"議事録","order":4,"vars":[{"key":"meeting","label":"会議名","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 第3回 販促企画会議"},{"key":"date","label":"日時","multiline":false,"optional":true,"attachable":false,"placeholder":""},{"key":"members","label":"参加者","multiline":false,"optional":true,"attachable":false,"placeholder":""},{"key":"transcript","label":"文字起こし","multiline":true,"optional":false,"attachable":true,"placeholder":""}],"prompt":"# 役割\nあなたは正確さを最優先する議事録係です。会議に出ていない人が読んでも、何が決まり、誰が何をするかが分かる議事録を作ってください。\n\n# 入力\n## 会議名\n{{meeting}}\n\n## 日時\n{{date}}\n\n## 参加者\n{{members}}\n\n## 文字起こし\n\"\"\"\n{{transcript}}\n\"\"\"\n\n# 手順\n1. 文字起こしを最後まで読み、議題ごとに発言をまとめる\n2. 「決定」と「提案・意見」を分ける。決定は、合意したことが発言から確認できるものだけにする\n3. 「〜します」「〜までにやります」などの発言から ToDo を拾い、担当と期限を付ける\n4. 結論が出なかった論点を保留として拾い、次に誰が何をすれば決まるかを書く\n5. 文字起こしだけでは判断できない箇所を、確認が必要な点として挙げる\n\n# 出力形式\n# 議事録: {会議名}\n- 日時: \n- 参加者: \n\n## 要点（3行）\n\n## 決定事項\n| No | 決定内容 | 根拠となった発言（話者） |\n|---|---|---|\n\n## ToDo\n| No | 内容 | 担当 | 期限 |\n|---|---|---|---|\n\n## 保留・未決事項\n| 論点 | 決まっていないこと | 次に誰が何をするか |\n|---|---|---|\n\n## 議論の要旨\n議題ごとに見出しを立て、主な意見を「話者: 要旨」の箇条書きで。\n\n## 確認が必要な点\n- 聞き取れない・矛盾する・担当が曖昧な箇所\n\n# 守ること\n- 文字起こしに無いことは推測で埋めず「不明」と書く（担当・期限は特に）\n- 提案を決定として書かない\n- 数字・日付・固有名詞は発言のまま書く\n- 敬語や言いよどみは整えてよいが、意味は変えない\n\n# 最後に確認\n出力の前に、決定事項それぞれに根拠の発言があるか、ToDo の担当と期限が埋まっているか（不明なら「不明」）を確かめ、足りなければ直してから出す。","tips":"文字起こしが崩れているときは、先に「文字起こしの整形」をかけると精度が上がります。\n参加者を書いておくと、話者の取り違えが減ります。\nGem に登録しておくと、毎回ファイルを添付するだけで済みます。","example":"# 議事録: 第3回 販促企画会議\n- 日時: 2026年11月10日 10:00-11:00\n- 参加者: 田中、佐藤、鈴木\n\n## 要点（3行）\n- 来期の展示会は2回から1回に減らす\n- 浮いた予算は Web 広告に回す方向。配分は次回決める\n- 鈴木さんが Web 広告の見積もりを11/20までに取る\n\n## 決定事項\n| No | 決定内容 | 根拠となった発言（話者） |\n|---|---|---|\n| 1 | 来期の展示会は東京の1回のみとする | 「じゃあ東京だけにしましょう」（田中）→ 全員同意 |\n\n## ToDo\n| No | 内容 | 担当 | 期限 |\n|---|---|---|---|\n| 1 | Web 広告3社の見積もり取得 | 鈴木 | 11/20 |\n| 2 | 展示会の出展申込 | 不明 | 不明 |\n\n## 保留・未決事項\n| 論点 | 決まっていないこと | 次に誰が何をするか |\n|---|---|---|\n| Web 広告の予算 | 金額と配分 | 鈴木さんの見積もりを見て次回決定 |","gem":"","followups":[{"title":"決定と提案が混ざっている","text":"決定事項の表を見直し、合意が発言で確認できないものは「保留・未決事項」へ移してください。移した理由も添えてください。"},{"title":"ToDo が少ない","text":"「確認します」「調べておきます」「送ります」などの発言も ToDo として拾い直してください。"},{"title":"議事録が長い","text":"「議論の要旨」を議題ごとに3行以内に縮めてください。決定事項・ToDo・保留はそのまま残してください。"}]},{"id":"followup-mail","title":"議事録 → フォローアップメール","category":"meeting","summary":"議事録から送付メールと、担当者ごとの ToDo 一覧を作る","recommendGem":false,"mdName":"","order":5,"vars":[{"key":"minutes","label":"議事録","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"recipients","label":"宛先","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 参加者全員（社内）/ 先方の担当者（社外）"},{"key":"note","label":"一緒に伝えたいこと","multiline":true,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは仕事の早い事務局です。会議の後にすぐ送れるフォローアップメールを作ってください。\n\n# 前提\n書き手:\n{{my.profile}}\n文体: {{my.tone}}\n\n# 入力\n## 宛先\n{{recipients}}\n\n## 議事録\n\"\"\"\n{{minutes}}\n\"\"\"\n\n## 一緒に伝えたいこと\n{{note}}\n\n# 手順\n1. 宛先が社内か社外かで敬語の度合いを決める\n2. 議事録から決定事項・ToDo・次回予定を抜き出す\n3. 読み手が自分の宿題をすぐ見つけられる順に並べる\n\n# 出力形式\n## メール\n件名: 【共有】{会議名} の決定事項と ToDo（{日付}）\n\n本文:\n- お礼（1行）\n- 決定事項（箇条書き）\n- ToDo（「担当: 内容（期限）」の箇条書き）\n- 次回予定\n- 締め（1行）\n- 署名（書き手の情報から）\n\n## 担当者ごとの ToDo\n担当者ごとに見出しを立て、その人の ToDo だけを並べる（チャットで個別に送る用）。\n\n# 守ること\n- 議事録に無いことを書かない。担当や期限が「不明」のものは「（担当未定）」と書き、確認をお願いする一文を添える\n- 本文は 400 字程度に収める\n- 社外宛てのときは社内の事情（人事・予算の内訳など）を書かない\n\n# 最後に確認\nすべての ToDo が漏れなく載っているか、担当未定のものに確認のお願いがあるかを確かめてから出す。","tips":"「文字起こし → 議事録」の出力をそのまま貼れます。\n右上の「自分の情報」を入れておくと署名が入ります。","example":"件名: 【共有】第3回 販促企画会議の決定事項と ToDo（11/10）\n\n皆さま\n\n本日はありがとうございました。決定事項と ToDo を共有します。\n\n■ 決定事項\n・来期の展示会は東京の1回のみとする\n\n■ ToDo\n・鈴木さん: Web 広告3社の見積もり取得（11/20まで）\n・（担当未定）展示会の出展申込 → 担当をご相談させてください\n\n■ 次回\n11/24（月）10:00〜","gem":"","followups":[{"title":"もっと短く","text":"チャットで送れるよう、200字以内の版も作ってください。"}]},{"id":"minutes-trend","title":"複数回の議事録 → 論点の変化","category":"meeting","summary":"何回分もの議事録から、論点の移り変わりと持ち越された未決事項を追う","recommendGem":false,"mdName":"論点の変遷","order":6,"vars":[{"key":"minutes_set","label":"複数回の議事録","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"focus","label":"追いたいテーマ","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 予算、システム移行"}],"prompt":"# 役割\nあなたはプロジェクトの記録係です。複数回の会議を通して、何が決まり、何が決まらずに残っているかを追跡してください。\n\n# 入力\n## 複数回の議事録（古い順に並べる。各回の先頭に日付）\n\"\"\"\n{{minutes_set}}\n\"\"\"\n\n## 追いたいテーマ\n{{focus}}\n\n# 手順\n1. 各回の日付を確かめ、古い順に並べる\n2. 回をまたいで出てくる論点をまとめる（言い方が違っても同じ論点ならまとめる）\n3. 論点ごとに各回の状態（提起・議論・決定・保留・撤回）を追う\n4. 何回も持ち越されている論点と、方針が途中で変わった論点を特定する\n\n# 出力形式\n## 論点の変遷\n| 論点 | 第1回（日付） | 第2回（日付） | … | 現状 |\n|---|---|---|---|---|\n（各セルは「提起: 〜」「保留: 〜」のように状態と一言）\n\n## 決まったこと（時系列）\n- 日付: 決定内容\n\n## 持ち越されている未決事項\n| 論点 | 持ち越し回数 | 決まらない理由（議事録から読み取れる範囲） | 次に必要なこと |\n|---|---|---|---|\n\n## 方針が変わった点\n| 論点 | 変わる前 | 変わった後 | 変わった回 | 理由 |\n|---|---|---|---|---|\n\n## 次回に決めるべきこと（優先順）\n\n# 守ること\n- 議事録に無いことは推測で埋めず「不明」と書く\n- 理由は議事録に書かれている範囲で書く。書かれていなければ「記載なし」\n- 追いたいテーマの指定があれば、それ以外は「その他の論点」に短くまとめる\n\n# 最後に確認\n各論点の状態がすべての回について埋まっているか（出てこない回は「—」）を確かめてから出す。","tips":"議事録はファイル名に日付を入れて、まとめて添付すると楽です。\n四半期ごとの振り返りや、引き継ぎの前に使うと効果的です。","example":"## 論点の変遷\n| 論点 | 第1回（9/8） | 第2回（10/6） | 第3回（11/10） | 現状 |\n|---|---|---|---|---|\n| 展示会の回数 | 提起: 効果が落ちている | 議論: 縮小案 | 決定: 東京1回 | 決定済み |\n| Web 広告の予算 | — | 提起: 増額したい | 保留: 見積もり待ち | 未決（2回持ち越し） |","gem":"","followups":[{"title":"論点のまとめ方が粗い","text":"まとめた論点を分け直してください。1つの論点に別々の決定が入っているものは分けてください。"}]},{"id":"meeting-retro","title":"会議の振り返り","category":"meeting","summary":"決まらなかった理由と、次回の進め方を出す","recommendGem":false,"mdName":"会議の振り返り","order":7,"vars":[{"key":"minutes","label":"議事録または文字起こし","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"goal","label":"この会議で決めたかったこと","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは会議運営の改善を手伝うファシリテーターです。誰かを責めるのではなく、次の会議で決まるようにするための振り返りをしてください。\n\n# 入力\n## この会議で決めたかったこと\n{{goal}}\n\n## 議事録または文字起こし\n\"\"\"\n{{minutes}}\n\"\"\"\n\n# 手順\n1. 決めたかったことと、実際に決まったことを比べる\n2. 決まらなかったことごとに理由を分類する（情報不足 / 決める人がいない / 論点が曖昧 / 時間切れ / 意見の対立 / その他）\n3. 理由ごとに、次回までにできる手を考える\n\n# 出力形式\n## 1. 決まったこと・決まらなかったこと\n| 決めたかったこと | 結果（決定・保留・話題に出ず） |\n|---|---|\n\n## 2. 決まらなかった理由\n| 論点 | 理由の分類 | 根拠となるやりとり | 次回までにやること | 担当（分かれば） |\n|---|---|---|---|---|\n\n## 3. 次回の進め方\n- 事前に配るもの\n- 呼ぶべき人\n- 議題の立て方（問いの形にする。例:「A と B のどちらにするか」）\n- 時間配分\n\n## 4. 会議そのものの改善点（3つまで）\n\n# 守ること\n- 議事録に無いことは推測で埋めず「不明」と書く\n- 特定の人を批判する書き方をしない。仕組み・準備・進め方の問題として書く\n\n# 最後に確認\n決まらなかった論点すべてに「次回までにやること」が書かれているかを確かめてから出す。","tips":"「決めたかったこと」を書くと、話題にすら出なかった論点も見つけられます。\n出力の「次回の進め方」は「アジェンダ作成」の素材にそのまま使えます。","example":"## 2. 決まらなかった理由\n| 論点 | 理由の分類 | 根拠となるやりとり | 次回までにやること | 担当 |\n|---|---|---|---|---|\n| Web 広告の予算 | 情報不足 | 「見積もりがないと何とも」（田中） | 3社の見積もりを比較表にして前日に配る | 鈴木 |","gem":"","followups":[{"title":"改善点が一般論","text":"この会議のやりとりに即した改善点に書き直してください。どの発言からそう判断したかを添えてください。"}]},{"id":"doc-known-unknown","title":"資料 → わかっていること・確認すべきこと","category":"reading","summary":"事実・推測・不明点・確認先・前提とリスクを分けて表にする","recommendGem":true,"mdName":"わかっていること・確認すべきこと","order":1,"vars":[{"key":"doc","label":"資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"purpose","label":"資料を読む目的・自分の立場","multiline":false,"optional":false,"attachable":false,"placeholder":"例: ベンダーの提案を受けて、発注するか判断する"},{"key":"context","label":"補足（背景・気になっている点）","multiline":true,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは慎重で抜け目のない調査担当です。資料から「確かに言えること」と「まだ分からないこと」を厳密に分けてください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 資料を読む目的・自分の立場\n{{purpose}}\n\n## 補足\n{{context}}\n\n## 資料\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 資料を最後まで読み、目的に関わる記述を拾う\n2. 書かれている事実と、書かれていないが読み取れる推測を分ける\n3. 目的に照らして、判断に必要なのに資料に無い情報を洗い出す\n4. それぞれ誰に聞けば分かるかを考え、確認すべきことに優先度を付ける\n5. 資料が置いている前提と、それが崩れたときのリスクを挙げる\n\n# 出力形式\n## 1. 要旨（3行）\n\n## 2. わかっていること（資料に書かれている事実）\n| No | 事実 | 資料の該当箇所（見出し・ページ・短い引用） |\n|---|---|---|\n\n## 3. 資料から推測できること\n| No | 推測 | 確度（高・中・低） | 推測の根拠 |\n|---|---|---|---|\n\n## 4. わかっていないこと\n目的の判断に必要なのに資料に無い情報。\n\n## 5. 確認すべきこと\n| 優先度 | 確認すること | なぜ必要か | 誰に聞くか | 聞き方（そのまま使える一文） |\n|---|---|---|---|---|\n\n## 6. 前提とリスク\n| 資料が置いている前提 | 崩れたときに起きること | 影響（大・中・小） |\n|---|---|---|\n\n# 守ること\n- 事実と推測を混ぜない。資料に明記されていないものは必ず「推測」側に置く\n- 該当箇所を示せない事実は書かない\n- 確認すべきことは、目的の判断に効く順に並べる（優先度 A を3つまでに絞る）\n\n# 最後に確認\n「わかっていること」の各行に該当箇所があるか、推測が事実の表に紛れていないかを確かめてから出す。","tips":"目的を具体的に書くほど、「確認すべきこと」が鋭くなります。\n提案書・仕様書・見積書・調査レポートなど、判断の前に読む資料なら何でも使えます。\n続けて「相手先への質問リスト」を使うと、そのまま送れる質問文になります。","example":"## 2. わかっていること\n| No | 事実 | 資料の該当箇所 |\n|---|---|---|\n| 1 | 初期費用は 480 万円（税別） | p.12「費用」 |\n| 2 | 導入期間は契約から3か月 | p.9「スケジュール」 |\n\n## 3. 資料から推測できること\n| No | 推測 | 確度 | 推測の根拠 |\n|---|---|---|---|\n| 1 | 保守費用は別途かかる | 中 | p.12 に「初期費用」の記載しかない |\n\n## 5. 確認すべきこと\n| 優先度 | 確認すること | なぜ必要か | 誰に聞くか | 聞き方 |\n|---|---|---|---|---|\n| A | 年間の保守費用 | 5年総額で比較するため | ベンダーの営業担当 | 「初期費用のほかに、年間の保守費用はおいくらでしょうか」 |","gem":"","followups":[{"title":"推測が事実に混ざっている","text":"「わかっていること」の表を見直し、資料に文字通り書かれていないものはすべて「推測」の表へ移してください。"},{"title":"確認事項が多すぎる","text":"判断を変える可能性があるものだけに絞り、5件以内にしてください。外したものは最後に一覧で残してください。"}]},{"id":"question-list","title":"相手先への質問リスト","category":"reading","summary":"資料をもとに、答えやすく優先度のついた質問と送付文を作る","recommendGem":false,"mdName":"質問リスト","order":2,"vars":[{"key":"doc","label":"資料（または確認すべきことの一覧）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"counterpart","label":"質問する相手","multiline":false,"optional":false,"attachable":false,"placeholder":"例: ベンダーの営業担当 / 社内の経理部"},{"key":"purpose","label":"何を判断するための質問か","multiline":false,"optional":false,"attachable":false,"placeholder":""},{"key":"limit","label":"質問数の上限","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 10"}],"prompt":"# 役割\nあなたは要点を外さない聞き手です。相手が短時間で答えられ、こちらの判断が確実に進む質問を作ってください。\n\n# 前提\n書き手:\n{{my.profile}}\n文体: {{my.tone}}\n\n# 入力\n## 質問する相手\n{{counterpart}}\n\n## 何を判断するための質問か\n{{purpose}}\n\n## 質問数の上限\n{{limit}}（指定なしなら10問まで）\n\n## 資料\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 判断に必要なのに資料から分からないことを洗い出す\n2. 答えによってこちらの行動が変わる質問だけを残す\n3. 選択肢や Yes/No で答えられる形に言い換える。数字を聞くときは単位と期間を指定する\n4. 優先度順に並べる\n\n# 出力形式\n## 質問リスト\n| 優先 | 質問 | 背景（なぜ聞くか） | 答えによって変わること |\n|---|---|---|---|\n\n## 送付文\n相手にそのまま送れるメール（またはチャット）の文面。質問は番号付きで、優先度 A のものを先に。\n\n# 守ること\n- 資料に答えが書いてあることは聞かない\n- 1つの質問で1つのことだけを聞く\n- 相手を疑うような言い方をしない\n\n# 最後に確認\n資料に答えが載っている質問が紛れていないか、1問1論点になっているかを確かめてから出す。","tips":"「資料 → わかっていること・確認すべきこと」の出力を貼ると、より絞り込まれた質問になります。\n社外向けには、右上の「自分の情報」に会社名を入れておくと送付文の名乗りが入ります。","example":"## 質問リスト\n| 優先 | 質問 | 背景 | 答えによって変わること |\n|---|---|---|---|\n| A | 年間の保守費用は初期費用とは別に発生しますか。発生する場合、金額はおいくらですか | 5年総額で比較するため | 他社との比較結果 |\n| B | 導入期間の3か月に、こちら側の作業（データ準備など）は含まれていますか | 社内の体制を決めるため | 担当者の割り当て |","gem":"","followups":[{"title":"質問が回りくどい","text":"各質問を40字以内に縮めてください。背景は送付文の冒頭に1回だけ書けば十分です。"}]},{"id":"tiered-summary","title":"段階要約（1行・3行・A4 1枚）","category":"reading","summary":"長い資料を、読む時間に合わせて3段階で要約する","recommendGem":false,"mdName":"要約","order":3,"vars":[{"key":"doc","label":"資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"reader","label":"読む人","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 忙しい部長、新しく入ったメンバー"}],"prompt":"# 役割\nあなたは要約の名人です。読み手が使える時間に合わせて、同じ資料を3段階で要約してください。\n\n# 入力\n## 読む人\n{{reader}}\n\n## 資料\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 資料の結論（いちばん言いたいこと）を特定する\n2. 結論を支える根拠の中から、重要なものを3つ選ぶ\n3. 段階ごとに書く。短い要約は長い要約の縮約になるよう、内容を一致させる\n\n# 出力形式\n## 1行（40字以内）\n\n## 3行\n1. 結論\n2. 最も重要な根拠\n3. 読み手への影響・次の行動\n\n## A4 1枚（800字程度）\n見出しを3〜5個立てる。数字はそのまま残す。\n\n## キーワード\n資料を探し直すときに使う語を5つ。\n\n# 守ること\n- 資料に無いことを書かない。解釈や意見は入れない\n- 数字・固有名詞・日付は原文のまま書く\n- 資料の結論がはっきりしないときは「資料には結論の明記がない」と書いた上で、最も強く主張されていることを書く\n\n# 最後に確認\n3段階の内容が矛盾していないか、数字が原文と一致しているかを確かめてから出す。","tips":"読む人を指定すると、言葉の難しさと強調する点が変わります。\n共有チャットには「3行」、報告書の添付には「A4 1枚」が使いやすいです。","example":"## 1行\n来期は展示会を1回に減らし、浮いた予算を Web 広告に回す計画。\n\n## 3行\n1. 展示会を2回から1回（東京）に減らす\n2. 展示会1回あたりの商談数が前年比 -40% と落ちているため\n3. Web 広告の配分は11/24の会議で決める。営業部は見積もり確認に協力が必要","gem":"","followups":[{"title":"大事な数字が落ちた","text":"A4 1枚の要約に、資料にある主要な数字（金額・割合・件数・期限）を漏れなく入れ直してください。"}]},{"id":"spec-contract-check","title":"仕様書・契約書の矛盾と曖昧さのチェック","category":"reading","summary":"矛盾・曖昧・欠落・不利な条件を、原文の引用と修正案つきで洗い出す","recommendGem":false,"mdName":"書類のチェック","order":4,"vars":[{"key":"doc","label":"書類","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"doctype","label":"書類の種類","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 業務委託契約書 / 要件定義書 / 仕様書"},{"key":"position","label":"自分の立場","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 発注側 / 受注側 / 開発担当"},{"key":"concern","label":"特に気になっている点","multiline":true,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは書類の読み込みに厳しいレビュアーです。後でもめる原因になりそうな箇所を、細かく、具体的に指摘してください。\n\n# 入力\n## 書類の種類\n{{doctype}}\n\n## 自分の立場\n{{position}}\n\n## 特に気になっている点\n{{concern}}\n\n## 書類\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 書類全体を読み、条項・章の構成を把握する\n2. 次の観点で問題を探す\n   - 矛盾: 別の箇所と食い違う記述\n   - 曖昧: 「適宜」「速やかに」「等」「原則として」など、解釈が割れる表現\n   - 欠落: この種類の書類にふつうある項目（期限、責任範囲、検収、変更手続き、解約、支払条件など）が無い\n   - 不整合: 金額・日付・数量・用語の表記が合わない\n   - 不利な条件: 自分の立場から見て一方的に不利な条項\n3. 問題ごとに修正案を書く\n\n# 出力形式\n## 総評（3行）\n\n## 指摘一覧\n| No | 箇所（条・項・ページ） | 種類 | 原文の引用 | 何が問題か | 修正案 | 重要度（高・中・低） |\n|---|---|---|---|---|---|---|\n\n## 書類に無い項目\n| 項目 | 無いと何が困るか | 追加する文案 |\n|---|---|---|\n\n## 相手に確認すること\n- そのまま聞ける一文で\n\n# 守ること\n- 指摘には必ず原文を引用する。引用できない指摘はしない（「書類に無い項目」を除く）\n- 重要度「高」は、金額・責任・期限・解約に関わるものに限る\n- これは法的な助言ではない。最後に「最終判断は法務・専門家に確認する」と1行添える\n\n# 最後に確認\n指摘ごとに原文の引用と修正案があるか、重要度の高い順に並んでいるかを確かめてから出す。","tips":"PDF をそのまま添付できます。条番号が付いた書類ほど指摘の箇所が正確になります。\n立場を書かないと、どちらにとって不利かの判断ができません。","example":"## 指摘一覧\n| No | 箇所 | 種類 | 原文の引用 | 何が問題か | 修正案 | 重要度 |\n|---|---|---|---|---|---|---|\n| 1 | 第5条2項 | 曖昧 | 「乙は速やかに修正する」 | 期限が無く、遅れても責任を問えない | 「乙は通知を受けた日から10営業日以内に修正する」 | 高 |\n| 2 | 第3条と別紙1 | 不整合 | 「納期 3月31日」/「納品日 3月15日」 | 納期が2通りある | どちらかに統一し、別紙を正とする旨を書く | 高 |","gem":"","followups":[{"title":"指摘が浅い","text":"「曖昧」の観点だけで、もう一度最初から読み直して指摘を追加してください。「等」「適宜」「必要に応じて」を特に見てください。"}]},{"id":"version-diff","title":"2つの版の差分と影響","category":"reading","summary":"旧版と新版を比べ、変わった点と影響・対応の要否を表にする","recommendGem":false,"mdName":"差分","order":5,"vars":[{"key":"old_doc","label":"旧版","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"new_doc","label":"新版","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"purpose","label":"何のために比べるか","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 契約更新で条件が悪くなっていないか確かめる"}],"prompt":"# 役割\nあなたは変更点を一つも見落とさない校閲者です。2つの版を比べ、何が変わり、それが何に影響するかを示してください。\n\n# 入力\n## 何のために比べるか\n{{purpose}}\n\n## 旧版\n\"\"\"\n{{old_doc}}\n\"\"\"\n\n## 新版\n\"\"\"\n{{new_doc}}\n\"\"\"\n\n（添付で渡す場合は、ファイル名に「旧」「新」が付いている方をそれぞれ旧版・新版とする）\n\n# 手順\n1. 両方の構成（章・条・見出し）を対応づける\n2. 対応する箇所ごとに、追加・削除・修正を拾う。数字・日付・固有名詞の変更は小さくても拾う\n3. 意味が変わる変更と、表現だけの変更を分ける\n4. 意味が変わる変更ごとに影響と、対応が要るかを判断する\n\n# 出力形式\n## 重要な変更（3つまで）\n\n## 変更一覧（意味が変わるもの）\n| No | 箇所 | 種類（追加・削除・修正） | 旧 | 新 | 影響 | 対応が必要か |\n|---|---|---|---|---|---|---|\n\n## 表現だけの変更\n- 箇所: 旧 → 新（まとめて短く）\n\n# 守ること\n- 旧・新の文言は原文のまま引用する\n- 影響は資料から言える範囲で書く。言えないときは「不明（要確認）」\n- 片方にしか無い章は、まるごと追加・削除として扱う\n\n# 最後に確認\n数字・日付の変更が漏れていないか、もう一度両方を突き合わせてから出す。","tips":"2つのファイルを添付するときは、ファイル名に「旧」「新」を入れてください。\n契約更新、規程の改定、仕様書の版上げの確認に向いています。","example":"## 変更一覧\n| No | 箇所 | 種類 | 旧 | 新 | 影響 | 対応が必要か |\n|---|---|---|---|---|---|---|\n| 1 | 第7条 | 修正 | 「月額 50,000 円」 | 「月額 55,000 円」 | 年間 6 万円の増額 | 要（予算の修正） |\n| 2 | 第12条 | 追加 | — | 「自動更新とする」 | 解約を忘れると継続される | 要（解約期限の管理） |","gem":"","followups":[{"title":"細かい変更が漏れていそう","text":"数字・日付・金額・期限・人名だけに絞って、旧版と新版をもう一度突き合わせてください。"}]},{"id":"number-check","title":"数字の検算","category":"reading","summary":"資料の合計・比率・前年比を計算し直し、食い違いを見つける","recommendGem":false,"mdName":"検算","order":6,"vars":[{"key":"doc","label":"資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"focus","label":"特に確かめたい数字","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは数字に厳しい経理担当です。資料の数字を一つずつ計算し直して、食い違いを見つけてください。\n\n# 入力\n## 特に確かめたい数字\n{{focus}}\n\n## 資料\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 資料の中の、計算で確かめられる数字を拾う（合計・小計・平均・割合・前年比・単価×数量など）\n2. それぞれの計算式を書き、元になる数字を資料から引いて計算し直す。暗算せず、必ず式を書いてから計算する（コードを実行できるなら実行して確かめる）\n3. 記載値と再計算値を比べる。端数処理による差（±1 程度）は「丸めの差」とする\n4. 単位・期間・対象範囲が揃っていない比較を探す\n\n# 出力形式\n## 検算結果\n| No | 箇所 | 記載値 | 計算式 | 再計算値 | 差 | 判定（一致・丸めの差・不一致・確認不可） |\n|---|---|---|---|---|---|---|\n\n## 単位・期間・定義の不整合\n| 箇所 | 内容 | なぜ問題か |\n|---|---|---|\n\n## 定義が分からない数字\n- 何を分母にした割合か分からない、など\n\n# 守ること\n- 元の数字が資料に無く計算できないものは「確認不可」とし、足りない数字を書く\n- 判定「不一致」は計算式を示した上で書く\n- 資料の数字を書き換えない\n\n# 最後に確認\n「不一致」とした行の計算を、もう一度やり直して確かめてから出す。","tips":"表を含む資料は、Excel やスプレッドシートのまま添付すると読み取りの誤りが減ります。\n報告書を出す前の最終チェックに使うと安心です。","example":"## 検算結果\n| No | 箇所 | 記載値 | 計算式 | 再計算値 | 差 | 判定 |\n|---|---|---|---|---|---|---|\n| 1 | p.3 売上合計 | 12,480 | 4,120 + 3,980 + 4,280 | 12,380 | +100 | 不一致 |\n| 2 | p.3 前年比 | 108% | 12,380 ÷ 11,460 | 108.0% | 0 | 一致 |","gem":"","followups":[{"title":"計算が合っているか不安","text":"「不一致」とした行だけ、計算をコードで実行して確かめ直してください。コードと結果も見せてください。"}]},{"id":"audience-rewrite","title":"読み手別の書き直し","category":"reading","summary":"同じ内容を、経営層・現場・社外など読み手に合わせて書き分ける","recommendGem":false,"mdName":"読み手別の書き直し","order":7,"vars":[{"key":"doc","label":"元の文章・資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"audiences","label":"読み手","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 経営層、現場の担当者、社外の取引先"},{"key":"purpose","label":"伝える目的","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは社内広報の編集者です。同じ内容を、読み手ごとに「知りたいこと」と「分かる言葉」に合わせて書き分けてください。\n\n# 入力\n## 読み手\n{{audiences}}\n\n## 伝える目的\n{{purpose}}\n\n## 元の文章・資料\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 読み手ごとに、知りたいこと・判断すること・知らなくてよいことを考える\n2. 元の内容から、読み手ごとに残す情報と削る情報を決める\n3. 専門用語を、その読み手に通じる言葉に置き換える\n4. 読み手ごとに書き直す\n\n# 出力形式\n読み手ごとに次の見出しで出す。\n\n## {読み手}向け\n- この読み手が知りたいこと（1行）\n- 書き直した文章\n- 削った情報\n- 言い換えた用語（元の語 → 言い換え）\n\n# 守ること\n- 元の内容に無い事実を足さない\n- 社外向けには、社内の事情（人事・予算の内訳・未確定の話）を出さない\n- 数字は読み手が違っても同じ値にする\n\n# 最後に確認\n各版で事実が食い違っていないか、社外向けに社内の情報が混ざっていないかを確かめてから出す。","tips":"経営層には結論と判断材料、現場には手順と影響、社外には相手にとっての変化、が基本です。","example":"## 経営層向け\n- 知りたいこと: 費用と効果、判断が必要か\n- 書き直した文章: 展示会を1回に減らし、年間 300 万円を Web 広告に回します。商談数は前年並みを見込みます。承認は不要で、11/24 に配分を報告します。","gem":"","followups":[{"title":"違いが小さい","text":"読み手ごとの違いをはっきりさせてください。経営層向けは3行以内、現場向けは手順を中心に書き直してください。"}]},{"id":"qa-source-check","title":"NotebookLM に入れる資料の点検","category":"notebooklm","summary":"ソースに入れる前に、資料の版違い・重複・抜け・古い情報を洗い出し、入れる資料と外す資料を決める","recommendGem":false,"mdName":"","order":0,"vars":[{"key":"files","label":"入れる予定の資料の一覧（ファイル名・日付・版・中身のメモ）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"project","label":"案件名と、質問箱で答えを出したいこと","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 基幹システム更改。費用・範囲・スケジュールの質問に答えられるようにしたい"}],"prompt":"# 役割\nあなたは案件の資料管理を担当する、慎重な文書管理者です。NotebookLM が古い資料や重複した資料から答えて誤らないよう、ソースに入れる前の資料を点検してください。\n\n# 入力\n## 案件名と、質問箱で答えを出したいこと\n{{project}}\n\n## 入れる予定の資料\n\"\"\"\n{{files}}\n\"\"\"\n\n# 手順\n1. 資料を1件ずつ読み、種類（契約・見積・仕様・議事録・メールなど）、日付、版を書き出す\n2. 同じ資料の別の版を見つけ、どれが最新かを決める。決め手（日付・版番号・本文の「改訂」の記載）を書く\n3. 中身がほぼ同じ資料（重複）を見つける\n4. 答えを出したいことに対して、足りない種類の資料を挙げる（例: 見積はあるが契約条件の資料が無い）\n5. 古い情報のまま入れると誤った答えにつながる資料に印を付ける\n6. 入れる・外す・確認してから決める、に分ける\n\n# 出力形式\n## 1. 点検の結果\n| No | 資料名 | 種類 | 日付・版 | 判定（入れる・外す・確認してから） | 理由 |\n|---|---|---|---|---|---|\n\n## 2. 版違い・重複\n| 資料のまとまり | 最新と判断したもの | 決め手 | 外すもの |\n|---|---|---|---|\n\n## 3. 足りない資料\n| 足りない資料 | 無いと答えられない質問の例 | 誰が持っていそうか |\n|---|---|---|\n\n## 4. ソースの名前の付け方\nNotebookLM で見分けやすいように、資料名の頭に付ける形の案（例: 「2026-11_見積_v3_A社」）。\n\n# 守ること\n- 一覧に無い資料を作らない。日付や版が分からないものは「不明」と書く\n- 最新かどうかを決められないときは「確認してから」にし、推測で決めない\n- 中身を読めない資料（ファイル名だけ）は、その旨を書く\n\n# 最後に確認\nすべての資料に判定と理由があるか、版違いのまとまりで最新が1つずつに決まっているかを確かめてから出す。","tips":"フォルダのファイル一覧をそのまま貼るだけでも使えます。資料そのものを添付すると、版違いや重複の判定が正確になります。\n新しい資料を足すたびに、一覧ごと点検し直すと、古い版が残り続けるのを防げます。\n外した資料は消さず、別のフォルダに残しておくと、後で経緯を追えます。","example":"## 2. 版違い・重複\n| 資料のまとまり | 最新と判断したもの | 決め手 | 外すもの |\n|---|---|---|---|\n| A社の見積書 | 見積書_v3（2026-11-10） | 版番号と日付が最も新しい。v3 の表紙に「v2 から保守費を改定」 | 見積書_v2、見積書_v1 |\n\n## 3. 足りない資料\n| 足りない資料 | 無いと答えられない質問の例 | 誰が持っていそうか |\n|---|---|---|\n| 保守契約の約款 | 夜間の障害対応は含まれるか | ベンダー営業 |","gem":"","followups":[{"title":"外すものを確かめたい","text":"「外す」と判定した資料それぞれについて、入れたままにすると起きそうな誤った答えの例を1つずつ挙げてください。"}]},{"id":"qa-ask","title":"NotebookLM への質問の型","category":"notebooklm","summary":"回答を「ソースにあること・推測・ソースに無いこと」に分けて返させる。後で質問台帳に取り出しやすくなる（NotebookLM に貼る）","recommendGem":false,"mdName":"","order":1,"vars":[{"key":"question","label":"聞きたいこと","multiline":true,"optional":false,"attachable":false,"placeholder":"例: 保守契約の範囲に、夜間の障害対応は含まれるか"},{"key":"why","label":"何のために聞くか","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 見積もりの比較で、夜間対応の費用を別に積むか決めたい"}],"prompt":"# 役割\nあなたは、このノートブックのソースだけを根拠に答える調査担当です。ソースに書かれていることと、そうでないことを厳密に分けて答えてください。\n\n# 目的\n{{why}}（指定なしなら、質問に正確に答えること）\n\n# 質問\n\"\"\"\n{{question}}\n\"\"\"\n\n# 手順\n1. 質問に関わる記述を、すべてのソースから探す\n2. ソースに書かれていることを、ソース名と該当箇所つきで抜き出す\n3. 書かれていないが、ソースから推測できることを分ける\n4. ソースのどこにも無いこと、ソースどうしで食い違っていることを挙げる\n5. 答えをはっきりさせるために、誰に何を確かめればよいかを書く\n\n# 出力形式\n## 結論（2行以内）\nはっきり言えないときは「ソースからは確定できない」と書き、理由を添える。\n\n## ソースに書いてあること\n| No | 内容 | ソース名 | 該当箇所（見出し・ページ） | 原文の引用（短く） |\n|---|---|---|---|---|\n\n## ソースから推測したこと\n| No | 推測 | 確度（高・中・低） | 推測の根拠 |\n|---|---|---|---|\n\n## ソースに無いこと・食い違っていること\n- （なければ「なし」）\n\n## あいまいな言い回し\n回答の根拠にした原文のうち、「原則として」「場合がある」「別途」「など」のように解釈が分かれる言い回しと、その解釈の候補。\n\n## 確かめること\n| 確かめること | 確認先の候補 | 聞き方（そのまま使える一文） |\n|---|---|---|\n\n# 守ること\n- ソースに無いことは推測で埋めず「不明」と書く\n- 一般常識や他社の例で補わない\n- 推測を「ソースに書いてあること」の表に入れない\n\n# 最後に確認\n「ソースに書いてあること」の各行に引用があるか、推測が混ざっていないかを確かめてから出す。","tips":"NotebookLM のチャット欄に、そのまま貼ってください。毎回この型で聞くと、回答の形がそろい、「やりとり → 質問台帳」で取り出しやすくなります。\n目的を書くと、何が「あいまい」かの判断が目的に沿います。\n回答が良ければ「メモに保存」しておくと、後でまとめてコピーできます。","example":"## 結論\n夜間の障害対応は、保守契約の範囲に含まれるとはソースからは確定できない。対応時間の記載が「営業時間内」だけのため。\n\n## ソースに書いてあること\n| No | 内容 | ソース名 | 該当箇所 | 原文の引用 |\n|---|---|---|---|---|\n| 1 | 障害の受付は平日 9〜18 時 | 保守契約書案 | 第5条 | 「障害受付時間は平日9時から18時とする」 |\n\n## あいまいな言い回し\n- 「緊急時は別途協議」: 夜間も対応する余地がある / 追加費用で対応する、のどちらとも読める","gem":"","followups":[{"title":"引用が無い","text":"「ソースに書いてあること」の各行に、原文の引用を付け直してください。引用できない行は「推測」の表へ移してください。"},{"title":"別のソースも見てほしい","text":"すべてのソースをもう一度確認し、今回の回答で使っていないソースに関係する記述があれば追加してください。"}]},{"id":"qa-ledger","title":"やりとり → 質問台帳","category":"notebooklm","summary":"NotebookLM で聞いた質問と回答から、あいまいな点を取り出し、ステータス（要確認・対応中・仮置き・確定）つきの台帳にする","recommendGem":true,"mdName":"質問台帳","order":2,"vars":[{"key":"log","label":"NotebookLM の質問と回答（コピーしたもの）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"project","label":"案件名と目的","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 基幹システム更改。ベンダー2社の見積もりを比べて発注先を決める"},{"key":"owner","label":"確認先の候補","multiline":false,"optional":true,"attachable":false,"placeholder":"例: ベンダー営業の田中さん / 情シスの佐藤さん / 法務"}],"prompt":"# 役割\nあなたは案件の論点管理を担当する、慎重なプロジェクト管理者です。NotebookLM とのやりとりから、分かったことと分かっていないことを取り出し、追いかけられる台帳にしてください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 案件名と目的\n{{project}}\n\n## 確認先の候補\n{{owner}}\n\n## NotebookLM の質問と回答\n\"\"\"\n{{log}}\n\"\"\"\n\n# ステータスの決め方\n- 要確認: 回答が無い、ソースに無い、解釈が割れる。まだ誰にも聞いていない\n- 対応中: やりとりの中に「問い合わせた」「確認中」とあるもの\n- 仮置き: 根拠は足りないが、この前提で進めるとやりとりの中で決めたもの。仮置きの内容と、見直す条件を必ず書く\n- 確定: ソースの原文か、確認先の返答による裏付けがあるもの。根拠の欄が空なら確定にしない\n- 取り下げ: 不要になった、または別の質問に統合したもの。統合先の ID を書く\n迷ったら、確定ではなく要確認にする。\n\n# 手順\n1. やりとりを質問ごとに分け、Q-001 から番号を振る。同じことを聞いている質問は1件にまとめる\n2. 質問ごとに、回答の要点と根拠（ソース名・該当箇所・短い引用）を書き出す\n3. 回答の中のあいまいな点を挙げる: 根拠が無い、推測で答えている、言い回しの解釈が分かれる、ソースどうしが食い違う\n4. ステータスを上の決め方で付ける\n5. 確定以外には、次の行動と確認先を書く。確認先の候補にある人から選び、合う人がいなければ「不明」と書く\n6. 案件の目的に効く順に並べる\n\n# 出力形式\n## 1. ステータス別の件数\n| 要確認 | 対応中 | 仮置き | 確定 | 取り下げ | 合計 |\n|---|---|---|---|---|---|\n\n## 2. すぐ動くもの（要確認・仮置き）\n- Q-番号 質問（短く） — 次の行動 / 確認先\n\n## 3. 質問台帳\n| ID | 質問 | 回答の要点 | 根拠（ソース名・該当箇所・短い引用） | あいまいな点 | ステータス | 次の行動 | 確認先 | 期限 | 更新日 | メモ |\n|---|---|---|---|---|---|---|---|---|---|---|\n\n## 4. あいまいな言い回し\n| ID | 原文の言い回し | 解釈の候補 | どちらかで何が変わるか |\n|---|---|---|---|\n\n# 守ること\n- やりとりに無い内容を補わない。分からない欄は「不明」と書く\n- 根拠の欄が空のまま「確定」にしない\n- 期限はやりとりに書かれていなければ空欄にする。勝手に決めない\n- 更新日は今日の日付にする\n- 表のセルの中で改行しない。複数あるときは「／」で区切る\n\n# 最後に確認\nすべての「確定」に根拠があるか、「仮置き」に見直す条件があるか、件数の表と台帳の件数が合っているかを確かめてから出す。","tips":"NotebookLM のチャットの回答や保存したメモを、まとめてコピーして貼ってください。「NotebookLM への質問の型」で聞いた回答だと、根拠が取り出しやすくなります。\nGemini の出力の表は、表の右下の「スプレッドシートにエクスポート」でそのままシートにできます。\nできた台帳を NotebookLM のソースに戻しておくと、次の質問で、確定したことを踏まえた回答になります。\n続けて、要確認の件を「相手先への質問リスト」に貼ると、そのまま送れる質問文になります。","example":"## 1. ステータス別の件数\n| 要確認 | 対応中 | 仮置き | 確定 | 取り下げ | 合計 |\n|---|---|---|---|---|---|\n| 2 | 0 | 1 | 1 | 0 | 4 |\n\n## 3. 質問台帳\n| ID | 質問 | 回答の要点 | 根拠 | あいまいな点 | ステータス | 次の行動 | 確認先 | 期限 | 更新日 | メモ |\n|---|---|---|---|---|---|---|---|---|---|---|\n| Q-001 | 夜間の障害対応は保守に含まれるか | 受付は平日 9〜18 時のみ | 保守契約書案 第5条「障害受付時間は平日9時から18時」 | 「緊急時は別途協議」の範囲が不明 | 要確認 | 夜間対応の有無と費用を聞く | ベンダー営業 |  | 2026-11-18 |  |\n| Q-002 | データ移行の費用は見積もりに入っているか | 移行作業費として計上 | 見積書 p.3「データ移行 120 万円」 |  | 確定 |  |  |  | 2026-11-18 |  |\n| Q-003 | 移行するデータの年数 | ソースに記載なし | 不明 | 年数で移行費が変わる | 仮置き | 直近5年分で見積もりを比べる。7年以上と分かったら見直す | 情シス |  | 2026-11-18 |  |","gem":"","followups":[{"title":"確定が多すぎる","text":"「確定」の行をすべて見直し、根拠がソースの原文か確認先の返答でないものは「要確認」に戻してください。戻した行の ID を最後に挙げてください。"},{"title":"台帳だけほしい","text":"「3. 質問台帳」の表だけを出してください。"},{"title":"仮置きを決めたい","text":"「要確認」のうち、返事を待たずに進めたいものについて、仮置きの案と見直す条件を出してください。台帳への反映はまだしないでください。"}]},{"id":"qa-ledger-update","title":"質問台帳の更新","category":"notebooklm","summary":"今の台帳に、新しいやりとり・確認先の返答・決めたことを反映する。ID を保ち、変更点を先に示す","recommendGem":true,"mdName":"質問台帳","order":3,"vars":[{"key":"ledger","label":"今の質問台帳","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"news","label":"新しく分かったこと（NotebookLM の回答・確認先の返事・会議で決めたこと）","multiline":true,"optional":false,"attachable":true,"placeholder":""}],"prompt":"# 役割\nあなたは案件の論点管理を担当する、慎重なプロジェクト管理者です。台帳を最新の状態にしてください。過去の記録を消さず、何がなぜ変わったかを追えるようにしてください。\n\n# 入力\n## 今の質問台帳\n\"\"\"\n{{ledger}}\n\"\"\"\n\n## 新しく分かったこと\n\"\"\"\n{{news}}\n\"\"\"\n\n# ステータスの決め方\n- 要確認: 回答が無い、ソースに無い、解釈が割れる。まだ誰にも聞いていない\n- 対応中: 確認先に問い合わせ済みで返事待ち、または調べている最中\n- 仮置き: 根拠は足りないが、この前提で進めると決めたもの。仮置きの内容と、見直す条件を必ず書く\n- 確定: ソースの原文か、確認先の返答による裏付けがあるもの。根拠の欄が空なら確定にしない\n- 取り下げ: 不要になった、または別の質問に統合したもの。統合先の ID を書く\n\n# 手順\n1. 新しく分かったことを1件ずつ読み、台帳のどの ID に関係するかを決める\n2. 関係する ID があれば、回答の要点・根拠・あいまいな点・ステータス・次の行動を更新する\n3. どの ID にも当たらないものは、最後の番号の続きで新しい ID を振って追加する\n4. 同じことを聞いている行があれば、古い ID を残し、新しい方を「取り下げ」にして統合先を書く\n5. 仮置きの「見直す条件」に当たる知らせがあれば、仮置きを見直す\n6. 更新した行の更新日を今日にする\n\n# 出力形式\n## 1. 変更点\n| ID | 変更した欄 | 変更前 | 変更後 | 理由（新しく分かったことの該当箇所） |\n|---|---|---|---|---|\n\n## 2. ステータス別の件数（変更前 → 変更後）\n| 要確認 | 対応中 | 仮置き | 確定 | 取り下げ | 合計 |\n|---|---|---|---|---|---|\n\n## 3. 質問台帳（更新後・全件）\n| ID | 質問 | 回答の要点 | 根拠（ソース名・該当箇所・短い引用） | あいまいな点 | ステータス | 次の行動 | 確認先 | 期限 | 更新日 | メモ |\n|---|---|---|---|---|---|---|---|---|---|---|\n\n## 4. 期限が過ぎている・近いもの\n- （なければ「なし」）\n\n# 守ること\n- 既存の ID を振り直さない。行を消さない（不要なものは「取り下げ」にする）\n- 新しく分かったことに無い内容で台帳を書き換えない。分からない欄は「不明」と書く\n- 根拠の欄が空のまま「確定」にしない\n- 変更していない行の内容を変えない\n- 表のセルの中で改行しない\n\n# 最後に確認\n変更点の表と台帳が一致しているか、行の数が減っていないか、すべての「確定」に根拠があるかを確かめてから出す。","tips":"台帳はスプレッドシートからコピーしても、前回の .md をそのまま貼っても構いません。\n確認先からのメールの返事や、会議で「この前提で進める」と決めたことも、そのまま「新しく分かったこと」に貼ってください。\n変更点の表を見て、意図しない書き換えが無いか確かめてから台帳を差し替えると安全です。","example":"## 1. 変更点\n| ID | 変更した欄 | 変更前 | 変更後 | 理由 |\n|---|---|---|---|---|\n| Q-001 | ステータス | 要確認 | 確定 | ベンダーの返信「夜間は別契約で月 3 万円」 |\n| Q-001 | 根拠 | 保守契約書案 第5条 | 保守契約書案 第5条／ベンダー返信 11/17 | 同上 |\n| Q-004 | （新規） |  | 夜間対応を別契約にするか | ベンダー返信で選択肢が出たため |","gem":"","followups":[{"title":"行が消えた","text":"変更前の台帳にあって、更新後の台帳に無い ID を挙げ、元に戻した台帳を出してください。"},{"title":"変更点だけ見たい","text":"「1. 変更点」の表だけを出してください。"}]},{"id":"qa-ledger-sheet","title":"質問台帳 → スプレッドシート","category":"notebooklm","summary":"台帳をタブ区切りで出し、ステータスのプルダウン・色分け・件数の集計・期限切れの強調の設定手順を付ける","recommendGem":false,"mdName":"","order":4,"vars":[{"key":"ledger","label":"質問台帳","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"tool","label":"使うソフト","multiline":false,"optional":true,"attachable":false,"placeholder":"Google スプレッドシート / Excel"}],"prompt":"# 役割\nあなたは表計算に詳しい業務改善の担当です。質問台帳を、表計算に詳しくない人でもステータスを管理できるシートにしてください。\n\n# 入力\n## 使うソフト\n{{tool}}（指定なしなら Google スプレッドシート）\n\n## 質問台帳\n\"\"\"\n{{ledger}}\n\"\"\"\n\n# シートの形\n- 1行目が見出し。列は A から順に: ID / 質問 / 回答の要点 / 根拠 / あいまいな点 / ステータス / 次の行動 / 確認先 / 期限 / 更新日 / メモ\n- ステータスは F 列、期限は I 列、更新日は J 列になる\n- ステータスに使う言葉は「要確認・対応中・仮置き・確定・取り下げ」の5つだけ\n\n# 手順\n1. 台帳の行を上の列の順に並べ直す。足りない列は空欄にする\n2. ステータスが5つの言葉以外になっている行は、近い方に直し、直した行を挙げる\n3. 日付は yyyy-mm-dd にそろえる\n4. 設定の手順を、メニューの名前どおりに書く\n\n# 出力形式\n## 1. 貼り付ける表（タブ区切り）\n```\n（1行目が見出し。セルの中に改行とタブを入れない）\n```\nA1 を選んで貼り付ける。\n\n## 2. ステータスのプルダウン\nF 列に、5つの言葉から選ぶ入力規則を付ける手順。\n\n## 3. ステータスの色分け\n条件付き書式の手順と、色の案（要確認・対応中・仮置き・確定・取り下げ）。色だけに頼らないよう、文字はそのまま残す。\n\n## 4. 件数の集計\n別の場所（例: M1 から下）に置く、ステータスごとの件数の COUNTIF の式と合計の式。\n\n## 5. 期限切れの強調\n期限（I 列）が今日より前で、ステータスが確定・取り下げ以外の行に色を付ける、カスタム数式の条件付き書式。\n\n## 6. 直した箇所\nステータスや日付の形を直した行（なければ「なし」）。\n\n# 守ること\n- 台帳に無い行や内容を足さない。分からない欄は空欄にする\n- 数式は、指定のソフトでそのまま動くものにする\n- 列の位置を変えたら、数式の列も合わせる\n\n# 最後に確認\n表の行数が台帳と同じか、数式の列（F・I）が見出しの位置と合っているかを確かめてから出す。","tips":"「やりとり → 質問台帳」や「質問台帳の更新」の出力を、そのまま貼ってください。\n一度シートを作ったら、次からは更新した表だけを貼り替えれば、プルダウンと色分けはそのまま使えます（貼るときは「値のみ貼り付け」）。\nGemini の表をエクスポートしてシートにした場合も、2〜5 の手順だけ使えます。","example":"## 4. 件数の集計\n| セル | 入れるもの |\n|---|---|\n| M1 | 要確認 |\n| N1 | =COUNTIF($F:$F, M1) |\n| M6 | 合計 |\n| N6 | =SUM(N1:N5) |\n\n## 5. 期限切れの強調\n範囲 A2:K、カスタム数式:\n=AND($I2\u003c>\"\", $I2\u003cTODAY(), $F2\u003c>\"確定\", $F2\u003c>\"取り下げ\")","gem":"","followups":[{"title":"Excel で使いたい","text":"同じ設定を Excel の手順（データの入力規則・条件付き書式）で書き直してください。"},{"title":"担当者ごとに見たい","text":"確認先（H 列）ごとに、ステータス別の件数を出す表の式を追加してください。"}]},{"id":"qa-ledger-html","title":"質問台帳 → 見やすい HTML","category":"notebooklm","summary":"台帳を、件数カード・ステータスの絞り込み・検索・期限切れの強調つきの HTML 1枚にする（Canvas 向け）","recommendGem":false,"mdName":"","order":5,"vars":[{"key":"ledger","label":"質問台帳","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"viewer","label":"見る人と場面","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 週次の定例で、課長と一緒に画面を見ながら確認する"}],"prompt":"# 役割\nあなたは業務画面に強い情報デザイナー兼フロントエンドエンジニアです。質問台帳を、開いてすぐ「何が残っているか」が分かる HTML 1枚にしてください。\n\n# 入力\n## 見る人と場面\n{{viewer}}（指定なしなら、自分が毎日見て次の行動を決める）\n\n## 質問台帳\n\"\"\"\n{{ledger}}\n\"\"\"\n\n# 画面に入れるもの\n1. 上部: ステータス別の件数カード（要確認・対応中・仮置き・確定・取り下げ）。カードを押すとそのステータスに絞り込む\n2. 絞り込み: ステータスの切り替えボタン、確認先の選択、文字検索（質問・回答・メモが対象）\n3. 一覧: 1件1行。ID・質問・ステータス・次の行動・確認先・期限を見せる。初期の並びは 要確認 → 対応中 → 仮置き → 確定 → 取り下げ、同じステータスの中は期限が近い順\n4. 行を押すと開く詳細: 回答の要点・根拠（引用）・あいまいな点・メモ\n5. 期限が今日より前で、確定・取り下げ以外の行は「期限切れ」の印を付ける\n6. 仮置きの行には、見直す条件をいつも見えるように出す\n\n# 作り方\n- HTML・CSS・JavaScript を1ファイルにまとめる\n- 台帳のデータは、HTML の中の JavaScript の配列として埋め込む\n- 画面の文字は textContent で入れる（innerHTML に台帳の文字を入れない）\n- ステータスは色に加えて、文字のラベルでも区別する\n- スマホの幅（375px）では、一覧を縦に積んだカードにする\n- 印刷したときは、絞り込み中の行だけが表で出るようにする\n\n# 出力形式\n## 画面の説明（3行）\n\n## HTML\n```html\n（ファイル全体。省略しない）\n```\n\n## 台帳を差し替えるとき\n次回、データの配列だけを入れ替える方法（1〜2行）。\n\n# 守ること\n- 外部のライブラリ・CDN・Web フォント・画像を使わない。通信しない\n- 台帳に無い内容を足さない。空の欄は「不明」ではなく空欄のまま表示する\n- 台帳の行を省略しない\n- コードを「…（省略）」で省かない。出し切れないときは区切りのよい所で止めて「続きは『続き』と送ってください」と書く\n\n# 最後に確認\n件数カードの数と台帳の件数が合っているか、すべての行がデータに入っているか、閉じタグの漏れがないかを確かめてから出す。","tips":"Gemini の Canvas を使うと、出来上がりをその場で見て「ここを直して」と続けて頼めます。\nCanvas からダウンロードした HTML はダブルクリックで開けます。社内で共有するときは、議事録と同じ扱いの場所に置いてください。\n次からは「質問台帳の更新」の出力を貼り、「データの配列だけ差し替えて」と頼むと、見た目を保ったまま更新できます。","example":"## 画面の説明\n上に5つの件数カード、その下に絞り込みと検索、一覧は要確認が先頭に来ます。\n期限切れの行には赤い枠と「期限切れ」の文字が付きます。\n行を押すと、根拠の引用とあいまいな点が開きます。\n\n## HTML\n```html\n\u003c!doctype html>\n\u003chtml lang=\"ja\">\n\u003chead>\u003cmeta charset=\"utf-8\">\u003ctitle>質問台帳\u003c/title>\n\u003cstyle>/* 件数カード・一覧・詳細 */\u003c/style>\n\u003c/head>\n\u003cbody>\n  \u003csection class=\"counts\">…\u003c/section>\n  \u003csection class=\"filters\">…\u003c/section>\n  \u003cul class=\"ledger\">…\u003c/ul>\n  \u003cscript>\n    const rows = [\n      { id: 'Q-001', question: '夜間の障害対応は保守に含まれるか', status: '要確認', next: '夜間対応の有無と費用を聞く', owner: 'ベンダー営業', due: '' },\n      …\n    ];\n  \u003c/script>\n\u003c/body>\n\u003c/html>\n```","gem":"","followups":[{"title":"期限で並べたい","text":"初期の並びを、ステータスに関係なく期限が近い順にしてください。期限が空の行は最後にしてください。"},{"title":"報告用の1枚にしたい","text":"絞り込みと検索を外し、要確認・仮置き・期限切れだけを載せた A4 縦1枚の印刷向けレイアウトにしてください。"}]},{"id":"qa-digest","title":"質問台帳 → 確定事項まとめ（NotebookLM に戻す）","category":"notebooklm","summary":"台帳の確定・仮置きだけを、NotebookLM のソースに戻せる文書にする。次の質問から、決まったことを踏まえた回答になる","recommendGem":true,"mdName":"確定事項まとめ","order":6,"vars":[{"key":"ledger","label":"質問台帳","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"project","label":"案件名","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 基幹システム更改"}],"prompt":"# 役割\nあなたは案件の記録係です。質問台帳から、決まったことと仮に決めたことだけを抜き出し、NotebookLM が正しく読み取れる文書にしてください。\n\n# 入力\n## 案件名\n{{project}}\n\n## 質問台帳\n\"\"\"\n{{ledger}}\n\"\"\"\n\n# 手順\n1. ステータスが「確定」と「仮置き」の行だけを取り出す。要確認・対応中・取り下げは入れない\n2. テーマ（費用・範囲・日程・体制・契約など）ごとにまとめる\n3. 1件を1文の言い切りにする。主語と数字と条件を省かない（例: ×「含まれない」→ ○「保守契約に夜間の障害対応は含まれない」）\n4. 確定には根拠を、仮置きには「仮置き」の印と見直す条件を、それぞれ文の後ろに付ける\n5. 台帳の ID を各文の頭に付け、元の台帳に戻れるようにする\n\n# 出力形式\n# {案件名} 確定事項まとめ（作成日: 今日の日付）\n\nこの文書は、質問台帳のうち確定と仮置きだけをまとめたもの。仮置きは未確定であり、見直す条件が満たされたら変わる。\n\n## （テーマ名）\n- [Q-001] 確定: （言い切りの1文）（根拠: ソース名・該当箇所）\n- [Q-003] 仮置き: （言い切りの1文）（見直す条件: …）\n\n## まだ決まっていないこと（件数だけ）\n要確認 ◯件、対応中 ◯件。中身は質問台帳を見る。\n\n# 守ること\n- 台帳に無い内容を足さない。台帳の文を、意味を変えずに言い切りにするだけにする\n- 仮置きを確定のように書かない。必ず「仮置き」と書く\n- 「これ」「上記」のような、前の文を見ないと分からない言葉を使わない（NotebookLM は文を切り出して読む）\n- 表を使わず、見出しと箇条書きだけで書く\n\n# 最後に確認\n確定と仮置き以外が入っていないか、すべての仮置きに見直す条件があるか、各文が単独で読んでも意味が通るかを確かめてから出す。","tips":"「.md で保存」したファイルを、NotebookLM のソースに追加してください。前の版は外して、いつも最新の1つだけを入れておきます。\nNotebookLM に質問するとき「確定事項まとめと食い違う記述があれば指摘して」と添えると、古い資料との食い違いが見つかります。","example":"# 基幹システム更改 確定事項まとめ（作成日: 2026-11-18）\n\n## 費用\n- [Q-002] 確定: A社の見積にはデータ移行作業費 120 万円が含まれる（根拠: 見積書 v3 p.3）\n- [Q-003] 仮置き: 移行するデータは直近5年分として見積を比べる（見直す条件: 7年以上の保存が必要と分かったとき）","gem":"","followups":[{"title":"仮置きを外したい","text":"確定だけでまとめ直してください。"}]},{"id":"qa-glossary","title":"案件の用語集（あいまいな言葉の定義）","category":"notebooklm","summary":"回答や資料に出てくる「原則」「標準」「月末」などの言葉を、案件の中での意味に固定する。決まっていない言葉は確認事項にする","recommendGem":true,"mdName":"用語集","order":7,"vars":[{"key":"text","label":"質問台帳・NotebookLM の回答・資料の抜粋","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"project","label":"案件名と関係者","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 基幹システム更改。当社（発注側）と A社（ベンダー）"}],"prompt":"# 役割\nあなたは契約書と仕様書の読み合わせに慣れた担当者です。人によって意味が変わりそうな言葉を拾い、案件の中での意味を1つに決めるための用語集を作ってください。\n\n# 入力\n## 案件名と関係者\n{{project}}\n\n## 質問台帳・回答・資料\n\"\"\"\n{{text}}\n\"\"\"\n\n# 手順\n1. 次のような言葉を拾う: 範囲があいまいな言葉（原則・標準・基本・など・一式）、時期の言葉（月末・営業日・速やかに）、数え方の言葉（1件・1人月・ユーザー数）、案件独自の略語や呼び名\n2. 言葉ごとに、資料の中で意味が書かれているかを探す。書かれていれば、その定義と出どころを書く\n3. 書かれていなければ、考えられる解釈を2つ以上挙げ、解釈によって何が変わるか（費用・日程・範囲）を書く\n4. 定義が書かれている言葉は「定義あり」、無い言葉は「要確認」にする\n\n# 出力形式\n## 1. 用語集\n| 用語 | 案件の中での意味 | 出どころ（資料名・該当箇所） | 状態（定義あり・要確認） |\n|---|---|---|---|\n\n## 2. 意味を決める必要がある言葉\n| 用語 | 解釈の候補 | 解釈で変わること | 誰と決めるか | 聞き方（そのまま使える一文） |\n|---|---|---|---|---|\n\n# 守ること\n- 資料に無い定義を作らない。定義が無いものは「要確認」にする\n- 一般的な辞書の意味で埋めない。案件の中での意味だけを書く\n- 影響の大きい言葉（費用・日程・範囲に効くもの）を先に並べる\n\n# 最後に確認\n「定義あり」のすべてに出どころがあるか、「要確認」のすべてに解釈の候補があるかを確かめてから出す。","tips":"質問台帳の「あいまいな点」の列や、「あいまいな言い回し」の表を貼ると、拾う言葉が絞れます。\n「要確認」の言葉は、質問台帳に新しい質問として足してください（「質問台帳の更新」に貼る）。\n定義が決まったら用語集を NotebookLM のソースに入れておくと、回答の言葉づかいがそろいます。","example":"## 2. 意味を決める必要がある言葉\n| 用語 | 解釈の候補 | 解釈で変わること | 誰と決めるか | 聞き方 |\n|---|---|---|---|---|\n| 営業日 | 平日のみ / 平日と当社の休業日を除く | 障害対応の期限が最大4日ずれる | ベンダー営業 | 「契約書の営業日には、当社の年末年始休業は含まれますか」 |","gem":"","followups":[{"title":"用語が多すぎる","text":"費用・日程・範囲のどれかに効く言葉だけに絞ってください。"}]},{"id":"qa-status-report","title":"質問台帳 → 確認状況の報告","category":"notebooklm","summary":"台帳から、要確認・期限切れ・最近決まったことと、その影響を、上司に送れる短い報告にする","recommendGem":false,"mdName":"","order":8,"vars":[{"key":"ledger","label":"質問台帳","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"reader","label":"報告する相手と、相手が気にしていること","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 課長。発注先を月末までに決められるかを気にしている"},{"key":"since","label":"前回の報告日","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 2026-11-11"}],"prompt":"# 役割\nあなたは忙しい上司への報告に慣れた担当者です。質問台帳から、相手が判断に使える情報だけを短くまとめてください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 報告する相手と、相手が気にしていること\n{{reader}}\n\n## 前回の報告日\n{{since}}（指定なしなら、更新日が直近7日以内のものを「最近決まったこと」とする）\n\n## 質問台帳\n\"\"\"\n{{ledger}}\n\"\"\"\n\n# 手順\n1. ステータス別の件数を数える\n2. 前回の報告日より後に「確定」「仮置き」になったものを拾う\n3. 期限が過ぎている、または7日以内のもので、確定・取り下げ以外のものを拾う\n4. 相手が気にしていることに効くものを選び、影響（遅れる・費用が増える・決められない）を一言で書く\n5. 相手にお願いしたいこと（判断・催促・承認）があれば、最後に1つにまとめる\n\n# 出力形式\n## 件名\n【確認状況】（案件名）（今日の日付）\n\n## 本文\n### 結論（3行以内）\n相手が気にしていることに対して、今どうか。\n\n### 件数\n要確認 ◯ / 対応中 ◯ / 仮置き ◯ / 確定 ◯（前回から確定 +◯）\n\n### 最近決まったこと\n- [Q-番号] 内容（確定・仮置き）\n\n### 気をつけてほしいこと\n| ID | 内容 | 期限 | 影響 |\n|---|---|---|---|\n\n### お願いしたいこと\n（無ければ「なし」）\n\n# 守ること\n- 台帳に無いことを書かない。分からない欄は「不明」と書く\n- 仮置きを確定と書かない\n- 全件を並べない。相手が判断に使うものだけにする（気をつけてほしいことは5件まで）\n- 本文は 400 字程度に収める\n\n# 最後に確認\n件数が台帳と合っているか、結論が相手の気にしていることに答えているかを確かめてから出す。","tips":"週1回、「質問台帳の更新」の後に使うと、報告の手間がほぼ無くなります。\nメールにする前に言い回しを整えたいときは、続けて「上司への報告」に貼ってください。\n前回の報告日を入れると、「最近決まったこと」がその日以降に絞られます。","example":"### 結論\n発注先は月末までに決められる見込みです。残る論点は夜間対応の費用1件で、11/22 までに A社から回答が来ます。\n\n### 気をつけてほしいこと\n| ID | 内容 | 期限 | 影響 |\n|---|---|---|---|\n| Q-004 | 夜間対応を別契約にするか | 11/22 | 回答が遅れると比較表が作れず、決定が翌月にずれる |","gem":"","followups":[{"title":"もっと短く","text":"結論と、お願いしたいことだけにしてください。チャットで送れる3行にしてください。"}]},{"id":"qa-decision-log","title":"決定ログ（いつ・誰が・何を根拠に決めたか）","category":"notebooklm","summary":"台帳の変更点・議事録・メールから、決めたことを日付順の記録にする。仮置きを確定にした理由も後から追える","recommendGem":true,"mdName":"決定ログ","order":9,"vars":[{"key":"text","label":"決めたことが分かる素材（台帳の変更点・議事録・メール）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"log","label":"これまでの決定ログ","multiline":true,"optional":true,"attachable":true,"placeholder":""}],"prompt":"# 役割\nあなたは案件の記録係です。後から「なぜこうなったのか」と聞かれても答えられるよう、決めたことを記録してください。\n\n# 入力\n## これまでの決定ログ\n\"\"\"\n{{log}}\n\"\"\"\n（空なら新しく作る。番号は D-001 から）\n\n## 決めたことが分かる素材\n\"\"\"\n{{text}}\n\"\"\"\n\n# 手順\n1. 素材から「決めた」「この前提で進める」「やめる」「変更する」に当たるものを拾う。検討しただけ・提案しただけのものは入れない\n2. それぞれについて、決めた日・決めた人（または場）・決めた内容・根拠・ほかの案と退けた理由・関係する質問台帳の ID を書く\n3. 前の決定を変えるものは、変える前の決定の番号を書き、「変更」とする\n4. これまでのログがあれば、その後ろに番号の続きで足す。過去の行は書き換えない\n\n# 出力形式\n## 1. 今回足した決定\n| No | 決めた日 | 決めた人・場 | 決めた内容 | 種類（決定・仮置き・変更・取りやめ） | 根拠 | 退けた案と理由 | 関係する ID |\n|---|---|---|---|---|---|---|---|\n\n## 2. 決定ログ（全件・日付順）\n（1と同じ列）\n\n## 3. 決めたのか分からないもの\n素材の中で、決まったのか検討中なのか読み取れないもの（なければ「なし」）。\n\n# 守ること\n- 素材に無い決定を作らない。決めた日や人が書かれていなければ「不明」と書く\n- 検討中のものを決定として書かない。迷ったら「3. 決めたのか分からないもの」に入れる\n- 過去の行を消したり書き換えたりしない。変えるときは新しい行で「変更」にする\n- 表のセルの中で改行しない\n\n# 最後に確認\nすべての決定に根拠か「不明」が書かれているか、過去の行が変わっていないかを確かめてから出す。","tips":"「質問台帳の更新」の変更点の表、会議の議事録、確認先とのメールをまとめて貼ってください。\n前回の .md を「これまでの決定ログ」に貼ると、続きの番号で足していきます。\n退けた案と理由を残しておくと、同じ議論を繰り返さずに済みます。","example":"## 1. 今回足した決定\n| No | 決めた日 | 決めた人・場 | 決めた内容 | 種類 | 根拠 | 退けた案と理由 | 関係する ID |\n|---|---|---|---|---|---|---|---|\n| D-004 | 2026-11-17 | 定例会議（課長） | 移行するデータは直近5年分で見積を比べる | 仮置き | 法定の保存年数を情シスが確認中のため | 全期間で比べる案: 見積がそろわず比較できない | Q-003 |","gem":"","followups":[{"title":"1件の経緯を見たい","text":"指定した ID に関係する決定だけを日付順に並べ、どう変わってきたかを3行でまとめてください。ID: （ここに書く）"}]},{"id":"ppt-outline","title":"素材 → スライド骨子","category":"ppt","summary":"1枚1メッセージ・タイトルに結論を書く形で、スライドの構成を作る（Gemini アプリ用）","recommendGem":false,"mdName":"スライド骨子","order":1,"vars":[{"key":"material","label":"素材（メモ・資料・議事録）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"goal","label":"発表の目的（誰に何をしてほしいか）","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 部長に Web 広告の増額を承認してもらう"},{"key":"audience","label":"聞き手","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 部長と課長3名。数字に厳しい"},{"key":"duration","label":"発表時間・枚数","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 10分 / 8枚程度"},{"key":"change","label":"聞き手の認識の変化（開始前 → 終了後）","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 前「AI は高くて効果が見えない」→ 後「小さく試せば元が取れる。まず1部署で試す」"},{"key":"medium","label":"見せ方","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 会議室で投影 / PDF で配って読んでもらう / スマホで読む"}],"prompt":"# 役割\nあなたは経営コンサルタント出身のプレゼン設計者です。聞き手が「なるほど、そうしよう」と動く資料の骨子を作ってください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 発表の目的\n{{goal}}\n\n## 聞き手\n{{audience}}\n\n## 発表時間・枚数\n{{duration}}（指定なしなら 8〜12 枚）\n\n## 聞き手の認識の変化\n{{change}}（指定なしなら、目的から「開始前に信じていること」と「終了後に分かってほしいこと」を推定し、推定だと明記する）\n\n## 見せ方\n{{medium}}（指定なしなら、会議室で投影）\n\n## 素材\n\"\"\"\n{{material}}\n\"\"\"\n\n# 手順\n1. 目的と聞き手から、資料全体で伝える「一文のメッセージ」を決める\n2. ストーリーを組む（結論 → 理由 → 根拠 → 提案 → 次の行動）。聞き手が反対しそうな点への答えを根拠の中に入れる。聞き手の認識が、開始前から終了後へ1枚ずつ進む順番にする\n3. 見せ方に合わせて1枚の情報量を決める。投影なら文字を減らして話で補う、PDF で配るなら読むだけで分かる文にする、スマホなら1枚の要素を2点までにする\n4. 1枚に1つのメッセージになるようにスライドへ割り振る。目安は発表1分あたり1枚\n5. 各スライドのタイトルを、名詞ではなく結論の文にする（例: ×「売上推移」→ ○「売上は3年で2倍に伸びた」）\n6. 各スライドに載せる要素と、図にするならその種類を決める\n\n# 出力形式\n## 1. 一文で言うと\n\n## 2. ストーリー\n結論 → 理由 → 根拠 → 提案 → 次の行動 を、それぞれ1行で。最後に「聞き手の認識: 開始前 → 終了後」を1行で。\n\n## 3. スライド構成\n| No | タイトル（結論の文・30字以内） | 伝えること | 載せる要素（3点まで） | 図の案（グラフ・表・図解の種類） | 素材の該当箇所 |\n|---|---|---|---|---|---|\n\n## 4. 素材に足りないもの\n説得力を上げるために追加したいデータや事例。\n\n# 守ること\n- 素材に無い数字や事例を作らない。必要なら「4. 素材に足りないもの」に書く\n- 1枚に載せる要素は3点まで。入りきらないものは別のスライドにするか削る\n- 表紙・目次・まとめのスライドも枚数に含める\n\n# 最後に確認\nタイトルだけを上から読んで話が通じるか、すべてのタイトルが結論の文になっているかを確かめ、直してから出す。","tips":"目的は「誰に何をしてほしいか」まで書くと、構成が締まります。\nこの骨子を「骨子 → スライドの Gemini 用の指示」に渡すと、Google スライドで1枚ずつ作れます。\n作る前に「ストーリーの診断」にかけるのもおすすめです。","example":"## 1. 一文で言うと\n展示会の予算を Web 広告に移せば、同じ費用で商談数を 1.3 倍にできる。\n\n## 3. スライド構成\n| No | タイトル | 伝えること | 載せる要素 | 図の案 | 素材の該当箇所 |\n|---|---|---|---|---|---|\n| 1 | 展示会の予算を Web 広告に移したい | 結論と依頼 | 依頼内容 / 金額 / 判断の期限 | なし（大きな文字） | 議事録 第3回 |\n| 2 | 展示会1回あたりの商談数は2年で4割減った | 現状の課題 | 商談数の推移 / 1件あたりの費用 | 棒グラフ（年別） | 実績表 p.4 |\n| 3 | Web 広告なら商談1件あたりの費用が半分になる | 解決策の根拠 | 費用比較 / 他社事例 | 横棒グラフ（2本の比較） | 見積もり資料 |","gem":"","followups":[{"title":"枚数が多すぎる","text":"半分の枚数にしてください。削るスライドと、その内容をどこに統合したかを示してください。"},{"title":"タイトルが結論になっていない","text":"すべてのタイトルを「〜は〜だ」「〜すべきだ」の形の結論文に書き直してください。"},{"title":"聞き手が納得しなさそう","text":"聞き手が最も疑いそうな点を3つ挙げ、それに答えるスライドを構成に組み込んでください。"}]},{"id":"story-check","title":"ストーリーの診断","category":"ppt","summary":"スライドのタイトルだけを並べて、話の流れが通るかを確かめる","recommendGem":false,"mdName":"ストーリーの診断","order":2,"vars":[{"key":"titles","label":"スライドのタイトル一覧","multiline":true,"optional":false,"attachable":false,"placeholder":"1行に1枚。上から順に"},{"key":"goal","label":"発表の目的","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたはストーリー構成の専門家です。タイトルだけを読んで、話の筋が通っているかを診断してください。\n\n# 入力\n## 発表の目的\n{{goal}}\n\n## スライドのタイトル一覧（上から順）\n\"\"\"\n{{titles}}\n\"\"\"\n\n# 手順\n1. タイトルだけを上から読み、伝わる内容を3行で要約する\n2. 各スライドの役割（結論・背景・課題・原因・解決策・根拠・効果・計画・依頼・まとめ）を判定する\n3. 論理の飛び・重複・順番の誤り・結論のないタイトルを指摘する\n4. 直したタイトル一覧を作る\n\n# 出力形式\n## タイトルだけで伝わる内容（3行）\n\n## 診断\n| No | タイトル | 役割 | 問題（なければ「—」） |\n|---|---|---|---|\n\n## 流れの問題\n- 論理の飛び（AとBの間に何が足りないか）\n- 重複\n- 順番\n\n## 直したタイトル一覧\n1. …\n\n# 守ること\n- タイトルはすべて結論の文（30字以内）に直す\n- 新しいスライドを足すときは【追加】と印を付ける\n\n# 最後に確認\n直したタイトル一覧だけを読んで、目的が伝わるかを確かめてから出す。","tips":"骨子の段階でも、完成した資料でも使えます。資料からタイトルだけをコピーして貼ってください。\n「タイトルを読むだけで話が分かる」資料は、忙しい人にも伝わります。","example":"## 診断\n| No | タイトル | 役割 | 問題 |\n|---|---|---|---|\n| 1 | 来期の販促計画 | 結論？ | 結論になっていない |\n| 2 | 展示会の実績 | 背景 | 何が言いたいか分からない |\n| 3 | Web 広告の見積もり | 解決策 | 課題の説明より先に解決策が来ている |\n\n## 直したタイトル一覧\n1. 展示会の予算を Web 広告に移したい\n2. 展示会の商談数は2年で4割減った\n3. 【追加】原因は来場者の層が変わったこと\n4. Web 広告なら商談1件の費用が半分になる","gem":"","followups":[{"title":"別の流れも見たい","text":"同じ内容を「課題から入る流れ」と「結論から入る流れ」の2通りで並べ、どちらが目的に合うか比べてください。"}]},{"id":"slides-gemini-instructions","title":"骨子 → スライドの Gemini 用の指示","category":"ppt","summary":"骨子から、Google スライドの Gemini にそのまま貼れる1枚ごとの短い指示を作る","recommendGem":false,"mdName":"","order":3,"vars":[{"key":"outline","label":"スライド骨子","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"design","label":"デザインの方向性","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 白地に紺。各スライドの主役はタイトルの結論と1つの数字。視線はタイトル → 数字 → 補足の順。写真と飾りのアイコンは使わない"}],"prompt":"# 役割\nあなたは Google スライドでの資料作りに慣れた制作担当です。スライドの中の Gemini に1枚ずつ渡す、短く迷いのない指示を作ってください。\n\n# 入力\n## デザインの方向性\n{{design}}\n\n## スライド骨子\n\"\"\"\n{{outline}}\n\"\"\"\n\n# 手順\n1. デザインの方向性が「おしゃれ」「高級感」のような形容詞だけなら、主役（最初に見せるもの）・配置・視線の順番・使わない要素に分けて解釈し、その解釈を「全体の作り方」に書く\n2. 骨子のスライドを1枚ずつ取り出す\n3. 1枚ごとに、タイトル・本文・図の指示を、そのまま貼れる短い文にまとめる\n4. 図は Gemini が作れない場合に備えて、自分で作るときの手順も一言添える\n\n# 出力形式\n最初に「全体の作り方」を3行で書く。その後、スライドごとに次の形で出す。\n\n### スライド {番号}: {タイトル}\n**Gemini に貼る指示**\n```\n次の内容でスライドを1枚作成してください。\nタイトル: …\n本文（箇条書き）:\n・…\n・…\nレイアウト: …（例: 左に本文、右に図）\n```\n**図・画像**: 何を、どう作るか（グラフならデータと種類）\n**発表で言うこと**: 1行\n\n# 守ること\n- Gemini に貼る指示は1枚あたり 250 字以内にする\n- 本文の箇条書きは3点まで、1点は全角25字以内にする\n- 骨子に無い内容を足さない\n- デザインの指定は全スライドで同じ言葉を使う（色やトーンが揃うようにする）\n\n# 最後に確認\nすべてのスライドがそろっているか、指示が 250 字を超えていないかを確かめてから出す。","tips":"「素材 → スライド骨子」の出力をそのまま貼ってください。\nGoogle スライドでは、右上の Gemini アイコンからサイドパネルを開き、1枚ずつ指示を貼ります。\nグラフは Gemini より、スプレッドシートで作って貼る方が数字が正確です。","example":"**全体の作り方**: 白地に紺のテーマを先に適用する → 1枚ずつ下の指示をサイドパネルに貼る → グラフはスプレッドシートで作って貼る。\n\n### スライド 2: 展示会1回あたりの商談数は2年で4割減った\n**Gemini に貼る指示**\n```\n次の内容でスライドを1枚作成してください。\nタイトル: 展示会1回あたりの商談数は2年で4割減った\n本文（箇条書き）:\n・2024年 30件 → 2026年 18件\n・1件あたりの費用は 2.3倍に\nレイアウト: 左に本文、右にグラフを置く空きスペース\n```\n**図・画像**: 年別の商談数の棒グラフ（2024: 30 / 2025: 24 / 2026: 18）。スプレッドシートで作って右側に貼る\n**発表で言うこと**: 費用は変わらないのに、成果だけが落ちています。","gem":"","followups":[{"title":"スライドの Gemini がうまく作れない","text":"指示をさらに短く、タイトルと本文だけにしてください。レイアウトの指定は外してください。"},{"title":"デザインがばらばら","text":"全スライド共通で使う「デザインの指示文」を1つ作り、各スライドの指示の先頭に同じ文を付けてください。"}]},{"id":"ppt-brushup-diagnosis","title":"既存資料のブラッシュアップ診断","category":"ppt","summary":"既存のスライドを1枚ずつ診断し、タイトル・削減・図解化・並べ替えの指示を出す","recommendGem":false,"mdName":"資料の診断","order":4,"vars":[{"key":"deck","label":"既存の資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"goal","label":"発表の目的","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 来期予算の承認を得る"},{"key":"audience","label":"聞き手","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは辛口のプレゼン講師です。この資料を、聞き手が一度で理解して動ける資料に直すための診断をしてください。遠慮は要りません。\n\n# 入力\n## 発表の目的\n{{goal}}\n\n## 聞き手\n{{audience}}\n\n## 既存の資料\n\"\"\"\n{{deck}}\n\"\"\"\n\n# 手順\n1. 資料全体を読み、いま伝わってくるメッセージを1文で書く。目的と比べてずれを指摘する\n2. スライドごとに、次の問題がないかを診断する\n   - メッセージが分からない（タイトルが名詞だけ）\n   - 情報が多すぎる（要素が4つ以上、文字が多い）\n   - 図にすべき文章がある\n   - 前後の流れに合わない・重複している\n3. 構成として、削る・まとめる・順番を変えるスライドを決める\n4. 表記ゆれ・フォント・色の使い方など、全体で揃えるルールを挙げる\n\n# 出力形式\n## 1. 総評\n- いま伝わるメッセージ:\n- 本来伝えたいメッセージ:\n- 最も効く直し方（3つ）\n\n## 2. スライドごとの診断\n| No | 今のタイトル | 問題 | 直したタイトル（結論の文） | 直し方の指示 |\n|---|---|---|---|---|\n\n## 3. 構成の組み替え\n- 削る: \n- まとめる: \n- 順番を変える: \n- 新しく足す: \n\n## 4. 全体で揃えること\n- 表記ゆれ（例: 「お客様／顧客」）、数字の単位、色の意味、フォントサイズ\n\n# 守ること\n- 資料に無い数字や事実を足さない。足すべきデータは「新しく足す」に提案として書く\n- 直し方の指示は「〜を〜にする」の形で具体的に書く（「見やすくする」は不可）\n- 良い点を褒めるより、直すべき点を優先する\n\n# 最後に確認\nすべてのスライドを診断したか、直したタイトルだけを読んで話が通るかを確かめてから出す。","tips":"PowerPoint は PDF に書き出してから添付すると、確実に読み取れます。\n診断の後は「スライド1枚の改善指示」で、問題の大きいスライドから直していくと効率的です。","example":"## 2. スライドごとの診断\n| No | 今のタイトル | 問題 | 直したタイトル | 直し方の指示 |\n|---|---|---|---|---|\n| 3 | 売上推移 | メッセージが分からない / 表が細かすぎる | 売上は3年で2倍、伸びは Web 経由 | 表を折れ線グラフにし、Web 経由の線だけ色を付ける |\n| 5 | 課題 | 箇条書きが8つ | 最大の課題は商談化率の低さ | 課題を3つに絞り、残りは付録へ |","gem":"","followups":[{"title":"指示が抽象的","text":"「直し方の指示」をすべて、作業する人が迷わない具体的な操作（何を・どこに・どうする）に書き直してください。"},{"title":"全部直す時間がない","text":"30分で直すとしたら、どのスライドの何を直すべきか、効果の大きい順に5つ挙げてください。"}]},{"id":"slide-single-improve","title":"スライド1枚の改善指示","category":"ppt","summary":"1枚のスライドを直し、スライドの Gemini にそのまま貼れる短い指示まで出す","recommendGem":false,"mdName":"","order":5,"vars":[{"key":"slide","label":"スライドの内容（文字・画像）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"message","label":"このスライドで伝えたいこと","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたはスライドの添削者です。この1枚を、3秒で言いたいことが伝わるスライドに直してください。\n\n# 入力\n## このスライドで伝えたいこと\n{{message}}\n\n## スライドの内容\n\"\"\"\n{{slide}}\n\"\"\"\n\n# 手順\n1. いまのスライドから伝わることを1文で書く\n2. 伝えたいことと比べて、問題を3つまで挙げる\n3. タイトル・本文・図を直す\n4. Google スライドの Gemini に貼る短い指示にまとめる\n\n# 出力形式\n## 今伝わること\n\n## 問題点（3つまで）\n\n## 直した内容\n- タイトル（結論の文・30字以内）:\n- 本文（箇条書き3点まで、1点は全角25字以内）:\n- 図・強調: \n\n## スライドの Gemini に貼る指示（200字以内）\n```\nこのスライドを次のように直してください。\n…\n```\n\n# 守ること\n- 伝えたいことが書かれていなければ、スライドから最も言いたそうなことを推定し、そう明記する\n- スライドに無い数字を足さない\n\n# 最後に確認\n直したタイトルだけで言いたいことが伝わるかを確かめてから出す。","tips":"Google スライドの該当ページのスクリーンショットを添付するのが手軽です。\n「既存資料のブラッシュアップ診断」で問題が大きかったスライドに使ってください。","example":"## 今伝わること\nいろいろな課題がある、ということしか伝わらない。\n\n## 問題点\n1. タイトル「課題」が結論になっていない\n2. 箇条書きが8つあり、どれが重要か分からない\n3. 文字が小さく、後ろの席から読めない\n\n## 直した内容\n- タイトル: 最大の課題は、商談化率が5%と低いこと\n- 本文: ・問い合わせは月120件と十分 ・商談になるのは6件だけ ・初回の返信が平均3日かかっている\n- 図・強調: 「5%」を大きく、赤で\n\n## スライドの Gemini に貼る指示\n```\nこのスライドを次のように直してください。\nタイトル: 最大の課題は、商談化率が5%と低いこと\n本文を3行に減らす: 問い合わせは月120件と十分 / 商談になるのは6件だけ / 初回の返信が平均3日かかっている\n「5%」を大きく強調する\n```","gem":"","followups":[{"title":"もっと大胆に","text":"文字をさらに減らし、数字1つと短い文1つで伝える版も作ってください。"}]},{"id":"chart-improve","title":"グラフの改善","category":"ppt","summary":"グラフの画像やデータから、伝えたいことに合った見せ方と作り方を出す","recommendGem":false,"mdName":"","order":6,"vars":[{"key":"chart","label":"グラフの画像またはデータ","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"message","label":"このグラフで伝えたいこと","multiline":false,"optional":false,"attachable":false,"placeholder":"例: Web 経由の売上だけが伸びている"}],"prompt":"# 役割\nあなたはデータの見せ方の専門家です。このグラフを、伝えたいことが一目で分かる形に直してください。\n\n# 入力\n## 伝えたいこと\n{{message}}\n\n## グラフの画像またはデータ\n\"\"\"\n{{chart}}\n\"\"\"\n\n# 手順\n1. いまのグラフから読み取れることと、読み取りにくいことを挙げる\n2. 伝えたいことに合うグラフの種類を選ぶ（比較 → 棒、推移 → 折れ線、構成 → 積み上げ棒、関係 → 散布図 など）\n3. 具体的な直し方を決める: 並び順、強調する1色、凡例をやめて直接ラベル、軸の範囲（棒グラフは0から）、単位、タイトルを結論の文に\n4. Google スプレッドシートでの作り方を手順にする\n\n# 出力形式\n## 今のグラフ\n- 読み取れること:\n- 読み取りにくいこと:\n\n## おすすめのグラフ\n- 種類と理由:\n- 次点:\n\n## 直し方\n| 項目 | 今 | 直した後 |\n|---|---|---|\n| タイトル | | |\n| 種類 | | |\n| 並び順 | | |\n| 色 | | |\n| ラベル・凡例 | | |\n| 軸・単位 | | |\n\n## スプレッドシートでの作り方\n1. …\n\n## 避けた方がよい見せ方\n- 3D・円グラフの多用など、このデータで誤解を生むもの\n\n# 守ること\n- 数字を変えない。画像から読み取った数字は「読み取り値」と明記する\n- 色は強調したい1系列だけに付け、他は灰色にする\n\n# 最後に確認\n直した後のタイトルが伝えたいことを言い切っているかを確かめてから出す。","tips":"グラフのスクリーンショットを添付するだけで使えます。元データを貼ると、作り方の手順が正確になります。","example":"## 直し方\n| 項目 | 今 | 直した後 |\n|---|---|---|\n| タイトル | 経路別売上 | Web 経由の売上だけが3年で2倍に |\n| 種類 | 円グラフ3つ | 折れ線グラフ1つ |\n| 色 | 5色 | Web 経由だけ紺、他は灰色 |\n| ラベル・凡例 | 凡例が右下 | 線の右端に経路名を直接書く |","gem":"","followups":[{"title":"スライドに貼る形にしたい","text":"このグラフをスライド1枚にするときのタイトル・補足の一文・強調の仕方を書いてください。"}]},{"id":"exec-summary","title":"エグゼクティブサマリー1枚","category":"ppt","summary":"長い資料を、経営層向けのスライド1枚にまとめる","recommendGem":false,"mdName":"","order":7,"vars":[{"key":"doc","label":"元の資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"reader","label":"読み手","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 役員会"},{"key":"ask","label":"読み手にしてほしいこと","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 予算 300 万円の承認"}],"prompt":"# 役割\nあなたは経営企画の担当者です。忙しい役員が1分で判断できるよう、資料をスライド1枚にまとめてください。\n\n# 入力\n## 読み手\n{{reader}}\n\n## 読み手にしてほしいこと\n{{ask}}\n\n## 元の資料\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 資料の結論と、読み手にしてほしいことを特定する\n2. 判断に必要な根拠を3つに絞る。それぞれ数字を1つ付ける\n3. リスクと、その対策を1つずつ書く\n\n# 出力形式\n## スライド1枚の内容\n- タイトル（結論の文・30字以内）:\n- 要点1（40字以内）／根拠の数字:\n- 要点2（40字以内）／根拠の数字:\n- 要点3（40字以内）／根拠の数字:\n- 判断してほしいこと（期限つき）:\n- リスクと対策（1行）:\n\n## スライドの Gemini に貼る指示（250字以内）\n```\n次の内容でエグゼクティブサマリーのスライドを1枚作成してください。\n…\n```\n\n## 口頭で添える一言（30秒）\n\n# 守ること\n- 資料に無い数字を使わない\n- 専門用語を使わない。使うなら一言で説明する\n- 判断してほしいことが資料から読み取れないときは「要確認」と書く\n\n# 最後に確認\n1枚に収まる量か（要点は3つまで）、数字がすべて資料にあるものかを確かめてから出す。","tips":"報告書や企画書の冒頭に付ける1枚として使えます。\n読み手にしてほしいことを書くと、要点がそれに向けて絞られます。","example":"## スライド1枚の内容\n- タイトル: 展示会費 300 万円を Web 広告に移し、商談を 1.3 倍に\n- 要点1: 展示会の商談数は2年で4割減 ／ 30件 → 18件\n- 要点2: Web 広告は商談1件の費用が半分 ／ 25万円 → 12万円\n- 要点3: 他部署で同じ移行をして成果が出ている ／ 商談 +35%\n- 判断してほしいこと: 予算の振り替えの承認（12/5 の役員会まで）\n- リスクと対策: 既存顧客との接点が減る → 東京の展示会は継続する","gem":"","followups":[{"title":"まだ長い","text":"要点を2つに減らし、タイトルと判断してほしいことだけで伝わる版にしてください。"}]},{"id":"speaker-notes-qa","title":"発表者ノートと想定問答","category":"ppt","summary":"スライドごとの話す内容と、聞かれそうな質問への答えを用意する","recommendGem":false,"mdName":"発表者ノートと想定問答","order":8,"vars":[{"key":"deck","label":"資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"audience","label":"聞き手と関心ごと","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 部長（費用対効果）、経理（予算の根拠）"},{"key":"duration","label":"発表時間","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 10分"}],"prompt":"# 役割\nあなたは発表のリハーサルに付き合うコーチです。本番で詰まらないよう、話す内容と想定問答を用意してください。\n\n# 前提\n発表者:\n{{my.profile}}\n\n# 入力\n## 聞き手と関心ごと\n{{audience}}\n\n## 発表時間\n{{duration}}\n\n## 資料\n\"\"\"\n{{deck}}\n\"\"\"\n\n# 手順\n1. スライドごとに、話す内容を書く。発表時間をスライドに配分する\n2. 聞き手の関心ごとから、出そうな質問を洗い出す\n3. 質問ごとに、30秒で言える答えと、根拠になるスライドを示す\n4. 最も厳しい質問を3つ選び、答え方を丁寧に用意する\n\n# 出力形式\n## 発表者ノート\n| No | スライド | 話す内容（話し言葉で） | 時間の目安 |\n|---|---|---|---|\n\n## 想定問答\n| 質問 | 質問者（立場） | 質問の意図 | 答え（30秒） | 根拠のスライド |\n|---|---|---|---|---|\n\n## 厳しい質問トップ3\n質問ごとに: 答え / 追加で聞かれたときの答え / 答えられないときの言い方\n\n# 守ること\n- 資料に無い事実を答えに使わない。資料で答えられない質問は「持ち帰る」答え方にする\n- 話す内容はスライドの文字を読み上げるだけにしない\n\n# 最後に確認\n時間の合計が発表時間に収まるか、厳しい質問に資料で裏付けのある答えがあるかを確かめてから出す。","tips":"資料は PDF で添付すると確実です。発表者ノートはそのまま Google スライドのノート欄に貼れます。","example":"## 想定問答\n| 質問 | 質問者 | 質問の意図 | 答え（30秒） | 根拠のスライド |\n|---|---|---|---|---|\n| Web 広告で本当に商談が増えるのか | 部長 | 効果の確からしさ | 他部署で同じ移行をして商談が 35% 増えました。まず3か月試し、商談数で判断させてください | 4 |","gem":"","followups":[{"title":"答えが長い","text":"すべての答えを、最初の一文で結論を言う形にして、2文以内に縮めてください。"}]},{"id":"html-design-improve","title":"HTML のデザイン改善","category":"html","summary":"機能を壊さずに、配色・余白・文字・階層を整えた完全な HTML を返す","recommendGem":false,"mdName":"","order":1,"vars":[{"key":"html","label":"HTML のコード","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"purpose","label":"画面の目的と使う人","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 社内の営業担当が毎朝見る売上の一覧"},{"key":"taste","label":"デザインの方向性","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 主役は今日の合計金額。視線は合計 → 担当者別の表 → 注記の順。紺と白、飾りのアイコンとグラデーションは使わない"},{"key":"constraints","label":"制約","multiline":true,"optional":true,"attachable":false,"placeholder":"例: 外部の CDN・フォントは使わない。JavaScript は変えない"}],"prompt":"# 役割\nあなたは業務システムの UI に強いシニアデザイナー兼フロントエンドエンジニアです。見た目を整えるだけでなく、使う人が迷わない画面にしてください。\n\n# 入力\n## 画面の目的と使う人\n{{purpose}}\n\n## デザインの方向性\n{{taste}}\n\n## 制約\n{{constraints}}\n\n## HTML のコード\n\"\"\"\n{{html}}\n\"\"\"\n\n# 手順\n1. 現状を診断する。観点: 情報の優先順位（最初に目に入るもの）、余白とそろえ、配色とコントラスト、文字の大きさと行間、ボタンやリンクの見分けやすさ、状態の表示（読み込み中・空・エラー）、スマホでの表示\n2. 改善の方針を3行で決める。方向性が「おしゃれ」「高級感」のような形容詞だけなら、主役（最初に見せるもの）・配置・視線の順番・使わない要素に分けて解釈し、その解釈を方針に書く\n3. 色・余白・文字サイズを CSS 変数（:root）にまとめ、全体に当てる\n4. 改善後の HTML を、省略せずに1つのファイルとして出す\n\n# 出力形式\n## 1. 診断\n| 優先度 | 観点 | 問題 | 直し方 |\n|---|---|---|---|\n\n## 2. 改善の方針（3行）\n\n## 3. 改善後の HTML\n```html\n（ファイル全体。省略しない）\n```\n\n## 4. 変更点\n- 何を、なぜ変えたか（箇条書き）\n\n# 守ること\n- 既存の文言・機能・フォーム・JavaScript から参照されている id と class を消さない、名前を変えない\n- 制約に「外部を使わない」とあれば、CDN・Web フォント・外部画像を使わない\n- 文字と背景のコントラストは 4.5:1 以上にする\n- コードを「…（省略）」で省かない。長くて出し切れないときは、区切りのよい所で止めて「続きは『続き』と送ってください」と書く\n\n# 最後に確認\n改善後の HTML で、元の id・class・文言が残っているか、閉じタグの漏れがないかを確かめてから出す。","tips":"Gemini の Canvas で開くと、改善後の画面をその場でプレビューできます。\n方向性は「誰が・どんな気分で使うか」を書くと決まりやすいです（例: 疲れた夕方でも読める）。\n「かっこよく」より「主役は何か・視線をどの順で動かすか・何を使わないか」を書く方が、狙いどおりになります。\nまず診断だけ出させて、方針に納得してからコードを出させる進め方もおすすめです。","example":"## 1. 診断\n| 優先度 | 観点 | 問題 | 直し方 |\n|---|---|---|---|\n| 高 | 情報の優先順位 | 合計金額が表の下にあり見落とす | 合計を画面上部のカードに出す |\n| 高 | コントラスト | 灰色の文字 #aaa が白地で 2.3:1 | #5b6169 に変えて 6.4:1 にする |\n| 中 | 余白 | 表の行の高さが詰まっている | 行の上下に 10px の余白 |\n\n## 2. 改善の方針\n- いちばん見たい数字を上に、詳細は下に\n- 色は紺1色と灰色だけ。強調は紺の濃淡で\n- 余白は 8px の倍数でそろえる","gem":"","followups":[{"title":"機能が壊れた","text":"元の HTML と比べて、消えた・名前が変わった id と class、変わった JavaScript をすべて挙げ、元に戻した版を出してください。"},{"title":"地味すぎる","text":"業務向けの落ち着きは保ったまま、見出しと数字にメリハリを付けた版を出してください。変更は CSS だけにしてください。"},{"title":"コードが途中で切れた","text":"続きを、切れた行の直前から出してください。"}]},{"id":"text-to-diagram-html","title":"文字資料 → 図解 HTML","category":"html","summary":"文字ばかりの資料を、フロー図・比較表・タイムラインなどの HTML 1枚にする（Canvas 向け）","recommendGem":false,"mdName":"","order":2,"vars":[{"key":"doc","label":"資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"diagram","label":"図の種類","multiline":false,"optional":true,"attachable":false,"placeholder":"例: フロー図 / 比較表 / タイムライン / 関係図 / おまかせ"},{"key":"audience","label":"見る人","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは情報デザイナーです。文字ばかりの資料を、ひと目で全体が分かる図解の HTML にしてください。\n\n# 入力\n## 図の種類\n{{diagram}}（指定なしなら、内容に最も合うものを選ぶ）\n\n## 見る人\n{{audience}}\n\n## 資料\n\"\"\"\n{{doc}}\n\"\"\"\n\n# 手順\n1. 資料の構造を見極める: 手順（順番がある）→ フロー図、選択肢の比較 → 比較表、時間の流れ → タイムライン、要素どうしのつながり → 関係図、場合分け → 分岐図\n2. 図に載せる要素を選ぶ。1つの図に載せる箱は 12 個までにする\n3. HTML 1ファイルで描く。図は HTML と CSS（必要なら SVG）で組む\n4. 図の下に、図だけでは伝わらない補足を短く添える\n\n# 出力形式\n## 選んだ図とその理由（2行）\n\n## HTML\n```html\n（ファイル全体）\n```\n\n# 守ること\n- 外部のライブラリ・CDN・Web フォント・画像を使わない\n- スマホの幅（375px）でも読めるようにする。横に長い図は縦に並び替える\n- 色だけで区別しない（形やラベルも変える）\n- 資料に無い情報を足さない\n\n# 最後に確認\n資料の要素が図から抜けていないか、HTML が1ファイルで完結しているかを確かめてから出す。","tips":"Gemini の Canvas を使うと、出来上がりをその場で見て、続けて「ここを直して」と頼めます。\n図の種類を迷ったら空欄で構いません。理由付きで選んでくれます。","example":"## 選んだ図とその理由\n申請から承認までの順番がある手続きなので、フロー図にしました。差し戻しの分岐があるため、分岐を矢印で示しています。\n\n## HTML\n```html\n\u003c!doctype html>\n\u003chtml lang=\"ja\">\n\u003chead>\u003cmeta charset=\"utf-8\">\u003ctitle>経費申請の流れ\u003c/title>\n\u003cstyle>/* 箱と矢印のスタイル */\u003c/style>\n\u003c/head>\n\u003cbody>\n  \u003col class=\"flow\">\n    \u003cli class=\"step\">申請者が入力\u003c/li>\n    \u003cli class=\"step\">上長が確認\u003c/li>\n    …\n  \u003c/ol>\n\u003c/body>\n\u003c/html>\n```","gem":"","followups":[{"title":"図が複雑すぎる","text":"箱の数を半分にしてください。細かい内容は図の下の補足に移してください。"},{"title":"印刷したい","text":"A4 横1枚に収まるよう、印刷用の CSS（@media print）を追加してください。"}]},{"id":"interactive-slides","title":"素材 → 動かせる HTML スライド","category":"html","summary":"前提をスライダーで動かすと試算と結論の数字が変わり、数字の出典をその場で見せられるスライドを HTML 1枚で作る（Canvas 向け）","recommendGem":false,"mdName":"","order":3,"vars":[{"key":"material","label":"素材（メモ・数値・骨子・既存の資料）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"goal","label":"発表の目的（誰に何をしてほしいか）","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 部長に問い合わせ AI の試験導入を承認してもらう"},{"key":"audience","label":"聞き手","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 部長と課長3名。費用対効果に厳しい"},{"key":"duration","label":"発表時間・枚数","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 10分 / 10枚程度"},{"key":"assumptions","label":"会議で動かしたい前提","multiline":true,"optional":true,"attachable":false,"placeholder":"例: 月の問い合わせ件数 / 1件の対応時間 / AI で解決できる割合 / 時給"},{"key":"design","label":"デザインの指定","multiline":true,"optional":true,"attachable":false,"placeholder":"例: 主役は各ページの結論の数字。視線はタイトル → 数字 → グラフの順。写真と飾りのアイコンは使わない"}],"prompt":"# 役割\nあなたは試算に強いプレゼン設計者兼フロントエンドエンジニアです。会議の場で「この前提が違ったら？」「その数字はどこから？」と聞かれても、その場で答えられるスライドを、HTML 1ファイルで作ってください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 発表の目的\n{{goal}}\n\n## 聞き手\n{{audience}}\n\n## 発表時間・枚数\n{{duration}}（指定なしなら 8〜12 枚）\n\n## 会議で動かしたい前提\n{{assumptions}}（指定なしなら、素材の数字のうち結論を左右するものを3〜4個選ぶ）\n\n## デザインの指定\n{{design}}（指定なしなら、白地に1色のアクセント。1枚に主張1つ、主役の要素1つ）\n\n## 素材\n\"\"\"\n{{material}}\n\"\"\"\n\n# 手順\n1. 目的と聞き手から、資料全体の結論を一文で決める。各ページのタイトルは結論の文にする\n2. 素材の数字を「自社のデータ」と「外部の調査データ」に分ける。外部の数字には出典を付ける。出典が素材に無い数字は使わず「不明」と書く\n3. 動かす前提を決め、前提から結果を出す計算式を1か所（JavaScript の関数）にまとめる\n4. ページを組む: 表紙 → 結論 → 現状 → 試算 → 根拠 → 提案 → 次の行動 → 出典一覧\n5. HTML を書き、最後に、前提を動かしたときに試算と結論の数字が両方変わるかを確かめる\n\n# 入れる機能\n- ページ送り: 矢印キーとボタン。今のページ番号と総数を表示\n- 前提のスライダー: 試算のページのグラフを押すと、前提のスライダーと数値の入力欄が開く。値を変えると、グラフ・ラベル・合計がその場で変わる\n- 結論との連動: 結論ページの数字も同じ計算式から出す。試算と結論が食い違わない\n- 計算の内訳: スライダーの横に、どの数字からどう計算したかの表を出す。「当初に戻す」ボタンを付ける\n- 出典カード: 外部の数字を押すと開く。資料名・発行元・公表日・該当箇所・原文の引用・確度（高・中・低）とその理由\n- データの区別: 自社のデータと外部の調査データを、色と「自社」「調査」のラベルの両方で分ける\n- ページ間のリンク: 目次の項目と、結論ページの各要素から、根拠のページへ移れる\n- 台本: 各ページに発表で話す文。N キーで表示・非表示を切り替える。発表時間に合わせた長さにする\n\n# 出力形式\n## 1. 一文で言うと\n\n## 2. ページ構成\n| No | タイトル（結論の文） | 載せる要素 | 動かせる前提 | 出典 |\n|---|---|---|---|---|\n\n## 3. 計算式\n前提と、結果を出す式（文章と式で）。\n\n## 4. HTML\n```html\n（ファイル全体。省略しない）\n```\n\n## 5. 素材に足りないもの\n試算や根拠を強くするために欲しいデータ。\n\n# 守ること\n- 外部のライブラリ・CDN・Web フォント・画像を使わない。グラフは SVG か HTML と CSS で描く。通信しない\n- 素材に無い数字・事例・出典を作らない。分からないものは「不明」と書く\n- 確度を水増ししない。根拠の書かれていない目安や、出典が一次資料でない数字は「低」にし、理由を書く\n- 色だけで区別しない（ラベルや形も変える）\n- 画面の文字は textContent で入れる\n- コードを「…（省略）」で省かない。出し切れないときは区切りのよい所で止めて「続きは『続き』と送ってください」と書く\n\n# 最後に確認\nすべての前提について、動かすと試算と結論の両方の数字が変わるか、外部の数字すべてに出典カードがあるか、HTML が1ファイルで完結しているかを確かめてから出す。","tips":"Gemini の Canvas を使うと、出来上がりをその場で動かして確かめ、「ここを直して」と続けて頼めます。\n先に「素材 → スライド骨子」で骨子を作ってから、その骨子と数字を素材に貼ると、構成が安定します。\n外部の数字を調べてほしいときは、先に Deep Research で調べ、出典つきの結果を素材に貼ってください。このプロンプトは素材に無い出典を作りません。\n1回で全ページが出し切れないときは、ページ構成と計算式を確かめてから「HTML を出して」と頼むと崩れにくくなります。","example":"## 3. 計算式\n- 前提: 月の問い合わせ件数 N（初期値 600）、1件の対応時間 t 分（12）、AI で解決できる割合 r（50%）、時給 w 円（2,500）\n- 年間の削減額 = N × 12 × r × t ÷ 60 × w = 600 × 12 × 0.5 × 12 ÷ 60 × 2,500 = 180 万円\n\n## 4. HTML\n```html\n\u003c!doctype html>\n\u003chtml lang=\"ja\">\n\u003chead>\u003cmeta charset=\"utf-8\">\u003ctitle>問い合わせ AI の効果試算\u003c/title>\n\u003cstyle>/* ページ・グラフ・スライダー・出典カード */\u003c/style>\n\u003c/head>\n\u003cbody>\n  \u003csection class=\"slide\" id=\"p3\">…結論…\u003c/section>\n  \u003csection class=\"slide\" id=\"p6\">…試算のグラフとスライダー…\u003c/section>\n  \u003cscript>\n    const base = { n: 600, t: 12, r: 0.5, w: 2500 };\n    function calc(p) { return p.n * 12 * p.r * p.t / 60 * p.w; }\n    …\n  \u003c/script>\n\u003c/body>\n\u003c/html>\n```","gem":"","followups":[{"title":"結論の数字が動かない","text":"結論ページの数字が、試算と同じ calc 関数から計算されているか確かめ、連動していない数字をすべて連動させてください。"},{"title":"ページが多すぎて途中で切れる","text":"まずページ構成を半分にし、試算と結論のページを優先して HTML を出してください。残りのページは次の回答で足してください。"},{"title":"出典の確度を見直したい","text":"出典カードの確度をすべて見直し、一次資料でないもの・根拠の書かれていないものを「低」にして、理由を書き直してください。"}]},{"id":"ui-score-review","title":"画面の採点レビュー","category":"html","summary":"観点別に10点満点で採点し、効果と手間つきの改善案を優先度順に出す","recommendGem":false,"mdName":"","order":3,"vars":[{"key":"target","label":"画面のスクリーンショットまたは HTML","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"purpose","label":"画面の目的","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 問い合わせフォーム。入力完了率を上げたい"},{"key":"users","label":"使う人","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは UI/UX の厳しい審査員です。点数を甘くせず、根拠のある採点と具体的な改善案を出してください。\n\n# 入力\n## 画面の目的\n{{purpose}}\n\n## 使う人\n{{users}}\n\n## 画面\n\"\"\"\n{{target}}\n\"\"\"\n\n# 手順\n1. 画面の目的が、最初の3秒で伝わるかを確かめる\n2. 次の7観点で採点する（各10点）。目的の伝わりやすさ / 情報の優先順位 / 操作の分かりやすさ / 見た目の一貫性 / 読みやすさ / アクセシビリティ / スマホでの使いやすさ\n3. 点数の理由を、画面のどこを見てそう判断したかと一緒に書く\n4. 改善案それぞれに重さを付ける。停止（目的を果たせない・誤操作や誤読を招く。直すまで公開しない）/ 修正必須（使えるが、多くの人がつまずく）/ 要観察（人によっては困る。使われ方を見て判断する）/ 許容（気になるが直さなくてよい）\n5. 改善案を、重さが大きい順、同じ重さの中では効果が大きく手間が小さい順に並べる\n\n# 出力形式\n## 採点\n| 観点 | 点数 | 理由 | 根拠の箇所 |\n|---|---|---|---|\n\n**合計: ◯ / 70**\n\n## 改善案\n| 優先 | 重さ（停止・修正必須・要観察・許容） | 問題 | 改善案（具体的に） | 効果 | 手間（小・中・大） |\n|---|---|---|---|---|---|\n\n## 今日すぐ直せること（3つ）\n\n# 守ること\n- 7点以上は「直すところがほとんど無い」場合だけにする\n- 改善案は「余白を広げる」ではなく「カード間の余白を 8px から 16px にする」のように具体的にする\n- スクリーンショットで判断できない観点（キーボード操作など）は「画像からは判断できない」と書き、点数を付けない\n\n# 最後に確認\nすべての点数に根拠の箇所があるか、改善案が優先度順になっているかを確かめてから出す。","tips":"同じ画面を直す前と後で採点すると、改善の効果を数字で示せます。\n目的に「何を増やしたいか」（入力完了率など）を書くと、改善案がそれに向きます。","example":"## 採点\n| 観点 | 点数 | 理由 | 根拠の箇所 |\n|---|---|---|---|\n| 目的の伝わりやすさ | 5 | 見出しが「お問い合わせ」だけで、何が得られるか分からない | 画面上部 |\n| 操作の分かりやすさ | 4 | 必須の欄が分からず、送信後にエラーが出る | 入力欄のラベル |\n\n**合計: 33 / 70**\n\n## 改善案\n| 優先 | 重さ | 問題 | 改善案 | 効果 | 手間 |\n|---|---|---|---|---|---|\n| 1 | 修正必須 | 必須が分からない | ラベルの横に「必須」を付け、任意の欄は「任意」と書く | 大 | 小 |","gem":"","followups":[{"title":"点数が甘い","text":"同業の優れた画面と比べるつもりで、厳しく採点し直してください。点数を下げた理由も書いてください。"}]},{"id":"a11y-check","title":"アクセシビリティ点検","category":"html","summary":"コントラスト・キーボード操作・見出し・ラベルなどを WCAG の基準で点検し、修正コードを出す","recommendGem":false,"mdName":"","order":4,"vars":[{"key":"html","label":"HTML のコード","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"users","label":"想定する利用者","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 高齢の社員も使う、キーボードだけで操作する人がいる"}],"prompt":"# 役割\nあなたはアクセシビリティの専門家です。WCAG 2.2 の AA を基準に、この HTML を点検してください。\n\n# 入力\n## 想定する利用者\n{{users}}\n\n## HTML のコード\n\"\"\"\n{{html}}\n\"\"\"\n\n# 手順\n次の項目を順に点検する。\n1. 文字と背景のコントラスト（本文 4.5:1、大きい文字 3:1）\n2. キーボードだけで全操作ができるか、フォーカスが見えるか、順番が自然か\n3. 見出しの構造（h1 から順に、飛ばしていないか）\n4. フォームの入力欄にラベルがあるか、エラーの伝え方\n5. 画像の代替テキスト\n6. 色だけで情報を伝えていないか\n7. ボタンとリンクの使い分け、操作できる部品の名前\n8. html の lang、ページのタイトル\n9. 動き・自動再生の抑制（prefers-reduced-motion）\n10. タップできる領域の大きさ（24px 以上）\n\n# 出力形式\n## 点検結果\n| No | 項目 | WCAG の基準番号 | 箇所（要素・行） | 問題 | 修正のコード | 重要度（高・中・低） |\n|---|---|---|---|---|---|---|\n\n## 問題が無かった項目\n\n## 修正後の HTML\n```html\n（ファイル全体。省略しない）\n```\n\n# 守ること\n- コントラストは色の値から計算した比率を書く\n- 見た目と機能は変えない。アクセシビリティに必要な変更だけをする\n- 判断できない項目（実際の操作が要るもの）は「コードからは判断できない」と書く\n\n# 最後に確認\n重要度「高」の問題がすべて修正後の HTML に反映されているかを確かめてから出す。","tips":"修正後のコードを受け取ったら、実際に Tab キーだけで画面を操作して確かめてください。","example":"## 点検結果\n| No | 項目 | WCAG | 箇所 | 問題 | 修正のコード | 重要度 |\n|---|---|---|---|---|---|---|\n| 1 | コントラスト | 1.4.3 | .note の文字 | #999 / #fff = 2.8:1 | `color: #595959;`（7.0:1） | 高 |\n| 2 | ラベル | 1.3.1 / 3.3.2 | メールの入力欄 | placeholder だけでラベルが無い | `\u003clabel for=\"mail\">メールアドレス\u003c/label>` | 高 |","gem":"","followups":[{"title":"修正が多すぎる","text":"重要度「高」だけを直した版を出してください。"}]},{"id":"mobile-check","title":"スマホ表示の点検","category":"html","summary":"スマホのスクリーンショットから、崩れている箇所と直す CSS を出す","recommendGem":false,"mdName":"","order":5,"vars":[{"key":"screenshot","label":"スマホのスクリーンショット","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"html","label":"HTML・CSS のコード","multiline":true,"optional":true,"attachable":false,"placeholder":""},{"key":"device","label":"端末・画面幅","multiline":false,"optional":true,"attachable":false,"placeholder":"例: iPhone 15 / 393px"}],"prompt":"# 役割\nあなたはスマホ表示に詳しいフロントエンドエンジニアです。スクリーンショットから、崩れや使いにくさを見つけて直し方を示してください。\n\n# 入力\n## 端末・画面幅\n{{device}}\n\n## スクリーンショット\n{{screenshot}}\n\n## HTML・CSS のコード\n\"\"\"\n{{html}}\n\"\"\"\n\n# 手順\n1. スクリーンショットを上から見て、崩れ・はみ出し・重なり・横スクロール・小さすぎる文字やボタンを探す\n2. 指で押しにくい部品（押せる領域が 44px 未満、隣と近すぎる）を探す\n3. 画面を占めすぎている固定ヘッダーや、最初の画面に大事な情報が無いことも指摘する\n4. コードがあれば原因の箇所を特定し、直す CSS を書く。コードが無ければ原因は推定と明記する\n\n# 出力形式\n## 問題一覧\n| No | 箇所 | 症状 | 原因（推定なら「推定」） | 直す CSS | 重要度 |\n|---|---|---|---|---|---|\n\n## まとめて当てる CSS\n```css\n@media (max-width: 600px) {\n  …\n}\n```\n\n# 守ること\n- 本文の文字は 16px 以上、押せる領域は 44px 四方以上を基準にする\n- パソコン表示を崩さないよう、変更は @media の中に入れる\n- 画像から分からないことは推測で決めつけない\n\n# 最後に確認\n直す CSS がすべての問題に対応しているかを確かめてから出す。","tips":"複数の画面を見るときは、スクリーンショットを何枚か添付して「画面ごとに」と書き足してください。\nコードも一緒に貼ると、原因の特定が正確になります。","example":"## 問題一覧\n| No | 箇所 | 症状 | 原因 | 直す CSS | 重要度 |\n|---|---|---|---|---|---|\n| 1 | 料金の表 | 右端が切れて横スクロールになる | 表の幅が固定（推定） | `.table-wrap { overflow-x: auto; }` | 高 |\n| 2 | 送信ボタン | 高さが 32px で押しにくい | padding が小さい | `button { min-height: 44px; }` | 中 |","gem":"","followups":[{"title":"表がどうしても入らない","text":"横に長い表を、スマホでは1行ずつカードに並べ替える CSS を書いてください。"}]},{"id":"mail-write","title":"メール作成・返信","category":"writing","summary":"用件と相手から、そのまま送れるメールを作る。返信にも使える","recommendGem":true,"mdName":"","order":1,"vars":[{"key":"situation","label":"用件・伝えたいこと","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"recipient","label":"相手と関係","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 取引先の課長。2回目のやりとり"},{"key":"received","label":"返信する元のメール","multiline":true,"optional":true,"attachable":false,"placeholder":""},{"key":"must","label":"必ず入れること","multiline":true,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたはビジネスメールの書き方に長けた秘書です。相手が一度読めば分かり、すぐ返事ができるメールを書いてください。\n\n# 前提\n書き手:\n{{my.profile}}\n文体: {{my.tone}}\n\n# 入力\n## 相手と関係\n{{recipient}}\n\n## 用件・伝えたいこと\n\"\"\"\n{{situation}}\n\"\"\"\n\n## 返信する元のメール\n\"\"\"\n{{received}}\n\"\"\"\n\n## 必ず入れること\n{{must}}\n\n# 手順\n1. 返信の場合は、元のメールで聞かれていることをすべて拾う\n2. 相手との関係から、敬語の度合いと長さを決める\n3. 結論（お願い・回答）を最初に書き、理由と詳細を後に書く\n4. 相手にしてほしいことがあれば、期限と一緒にはっきり書く\n\n# 出力形式\n## メール\n件名:\n本文:\n\n## 短い版\n同じ内容を半分の長さにしたもの。\n\n## 確認してほしい点\n- 事実が入力から分からず、仮に書いた箇所\n\n# 守ること\n- 入力に無い日付・金額・約束を書かない。必要なら【要確認: 〜】と書く\n- 返信では、元のメールで聞かれたことに漏れなく答える\n- 過剰な前置き・へりくだりを入れない\n\n# 最後に確認\n相手にしてほしいことと期限が明確か、元のメールの質問に全部答えているかを確かめてから出す。","tips":"用件は箇条書きのメモで構いません。言いにくいこと（断り・催促）も、そのまま書けば角の立たない言い方にしてくれます。","example":"","gem":"","followups":[{"title":"硬すぎる","text":"社内のやりとりとして、もう少しくだけた言い方にしてください。"},{"title":"断りをやわらげたい","text":"断る結論は変えずに、代わりの案を1つ添えた言い方にしてください。"}]},{"id":"boss-report","title":"上司への報告","category":"writing","summary":"結論 → 根拠 → 依頼の順で、チャット版とメール版を作る","recommendGem":false,"mdName":"","order":2,"vars":[{"key":"facts","label":"報告する内容・事実","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"ask","label":"上司にしてほしいこと","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 承認 / 判断 / 共有のみ"},{"key":"boss","label":"上司の関心ごと","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 期限に間に合うか、費用が増えないか"}],"prompt":"# 役割\nあなたは報告の上手な中堅社員です。忙しい上司が10秒で状況をつかみ、すぐ判断できる報告を書いてください。\n\n# 前提\n書き手:\n{{my.profile}}\n文体: {{my.tone}}\n\n# 入力\n## 報告する内容・事実\n\"\"\"\n{{facts}}\n\"\"\"\n\n## 上司にしてほしいこと\n{{ask}}\n\n## 上司の関心ごと\n{{boss}}\n\n# 手順\n1. 結論を1〜2行にする（何が起きたか／どうなったか／何をしてほしいか）\n2. 結論を支える根拠を3つまで選ぶ。上司の関心ごとに答えるものを優先する\n3. してほしいことを期限つきで書く。選択肢があれば、推す案と理由を添える\n4. 悪い知らせは隠さず、対策と一緒に先に書く\n\n# 出力形式\n## チャット版（150字以内）\n\n## メール版\n件名: 【報告】…（【要判断】【共有】など、してほしいことを件名に入れる）\n本文:\n1. 結論\n2. 根拠（3つまで）\n3. お願いしたいこと（期限）\n4. 補足（リスク・選択肢）\n\n# 守ること\n- 事実と自分の意見を分ける（意見には「私の考えでは」と付ける）\n- 入力に無い数字や見通しを書かない\n- 言い訳を書かない\n\n# 最後に確認\n最初の2行だけで状況とお願いが伝わるかを確かめてから出す。","tips":"進捗の報告、トラブルの第一報、判断のお願いに使えます。メモの箇条書きを貼るだけで十分です。","example":"","gem":"","followups":[{"title":"トラブルの報告にしたい","text":"起きたこと・影響・いまの対応・再発防止・お願い、の順に書き直してください。"}]},{"id":"proofread","title":"文章の校正","category":"writing","summary":"誤字・表記ゆれ・敬語・冗長さを直し、修正の一覧を付ける","recommendGem":true,"mdName":"校正","order":3,"vars":[{"key":"text","label":"文章","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"kind","label":"文書の種類","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 社外向けの案内文 / 社内報告書"},{"key":"rules","label":"表記のルール","multiline":true,"optional":true,"attachable":false,"placeholder":"例: 「お客様」に統一。数字は半角"}],"prompt":"# 役割\nあなたは経験豊富な校正者です。書き手の意図と文体を保ったまま、誤りと読みにくさを直してください。\n\n# 入力\n## 文書の種類\n{{kind}}\n\n## 表記のルール\n{{rules}}\n\n## 文章\n\"\"\"\n{{text}}\n\"\"\"\n\n# 手順\n1. 誤字脱字・変換ミスを直す\n2. 表記ゆれを統一する（ルールがあればそれに従い、無ければ多い方に合わせる）\n3. 敬語の誤り（二重敬語・尊敬と謙譲の取り違え）を直す\n4. 一文が長すぎるもの（目安 60 字超）を分ける。重複した言い回しを削る\n5. 意味が変わる可能性のある修正は、本文には入れず提案に回す\n\n# 出力形式\n## 修正後の全文\n\n## 修正一覧\n| No | 原文 | 修正 | 理由（誤字・表記ゆれ・敬語・長文・重複） |\n|---|---|---|---|\n\n## 提案（意味が変わる可能性があるもの）\n| 箇所 | 原文 | 提案 | 理由 |\n|---|---|---|---|\n\n# 守ること\n- 内容（事実・数字・主張）を変えない\n- 書き手の文体（です・ます／である）を変えない\n\n# 最後に確認\n修正後の全文で、数字や固有名詞が原文から変わっていないかを確かめてから出す。","tips":"社内の表記ルールを「表記のルール」に一度書いておき、Gem に登録すると毎回そろいます。","example":"","gem":"","followups":[{"title":"直しすぎ","text":"誤字・敬語の誤りだけを直し、言い回しは元のままにした版を出してください。"}]},{"id":"weekly-report","title":"週報・日報","category":"writing","summary":"箇条書きのメモから、決まった形式の報告を作る","recommendGem":true,"mdName":"週報","order":4,"vars":[{"key":"notes","label":"今週（今日）のメモ","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"period","label":"期間","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 11/10〜11/14"},{"key":"format","label":"社内の書式","multiline":true,"optional":true,"attachable":false,"placeholder":"決まった見出しがあれば貼る"}],"prompt":"# 役割\nあなたは要点をまとめるのが得意な同僚です。走り書きのメモを、上司が読みやすい報告に整えてください。\n\n# 前提\n書き手:\n{{my.profile}}\n文体: {{my.tone}}\n\n# 入力\n## 期間\n{{period}}\n\n## 社内の書式\n{{format}}\n\n## メモ\n\"\"\"\n{{notes}}\n\"\"\"\n\n# 手順\n1. メモを「やったこと」「成果・数字」「来週の予定」「課題・相談」「共有」に振り分ける\n2. やったことは成果が伝わる書き方にする（「〜した」ではなく「〜して、〜になった」）\n3. 社内の書式があれば、その見出しと順番に合わせる\n\n# 出力形式\n（社内の書式が無い場合）\n## {期間} 報告\n### 今週の成果\n### 数字\n### 来週の予定\n### 課題・相談\n### 共有事項\n\n# 守ること\n- メモに無い成果や数字を作らない\n- 1項目1行を基本にする\n- 相談事項は、誰に何を決めてほしいかまで書く\n\n# 最後に確認\nメモの内容がどこかの見出しに入っているか（漏れがないか）を確かめてから出す。","tips":"毎日のメモをためておき、金曜にまとめて貼る使い方が楽です。\n社内の書式を Gem に登録すると、毎回メモを貼るだけで済みます。","example":"","gem":"","followups":[{"title":"成果が地味に見える","text":"事実は変えずに、成果が伝わる書き方に直してください。数字がある項目は数字を先に書いてください。"}]},{"id":"devil-advocate","title":"反論役の壁打ち","category":"thinking","summary":"案の弱点をあえて突かせ、反論への答えと補強策を出す","recommendGem":false,"mdName":"反論と弱点","order":1,"vars":[{"key":"idea","label":"考え・案","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"context","label":"背景・誰に通したいか","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは手ごわい反対派です。この案を通す前に潰しておくべき弱点を、遠慮なく指摘してください。褒める必要はありません。\n\n# 入力\n## 背景・誰に通したいか\n{{context}}\n\n## 考え・案\n\"\"\"\n{{idea}}\n\"\"\"\n\n# 手順\n1. この案が成り立つための前提を洗い出し、疑わしいものを挙げる\n2. 反論を強い順に挙げる（論理の穴・根拠の弱さ・費用・リスク・代わりの案）\n3. 反論ごとに、どう答えればよいか、何の根拠があれば答えられるかを書く\n4. 案そのものを強くする直し方を出す\n\n# 出力形式\n## いちばんの弱点（1行）\n\n## 疑わしい前提\n| 前提 | なぜ疑わしいか | 確かめ方 |\n|---|---|---|\n\n## 反論\n| 強さ（強・中・弱） | 反論 | 答え方 | 必要な根拠 |\n|---|---|---|---|\n\n## 案を強くする直し方（3つ）\n\n# 守ること\n- 一般論ではなく、この案の中身に即して反論する\n- 反論のための反論（どんな案にも言えること）は書かない\n\n# 最後に確認\n反論のうち「強」のものに、答え方と必要な根拠がそろっているかを確かめてから出す。","tips":"企画を上司に出す前、提案を顧客に出す前に。同じ会話で「答え方」を自分で書いて、さらに突っ込ませると鍛えられます。","example":"","gem":"","followups":[{"title":"もっと厳しく","text":"決裁者になりきって、この案を却下する理由を3つ、却下のメールの文面で書いてください。"}]},{"id":"options-compare","title":"選択肢の比較と推奨","category":"thinking","summary":"重み付きの評価軸で選択肢を比べ、推奨と「推奨が変わる条件」を出す","recommendGem":false,"mdName":"選択肢の比較","order":2,"vars":[{"key":"decision","label":"決めたいこと","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 会計ソフトをどれにするか"},{"key":"options","label":"選択肢","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"criteria","label":"重視すること","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 費用、使いやすさ、サポート"},{"key":"constraints","label":"制約","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 予算は年 50 万円まで、3月から使いたい"}],"prompt":"# 役割\nあなたは公平な意思決定の支援者です。好みではなく、根拠と重みで選択肢を比べてください。\n\n# 入力\n## 決めたいこと\n{{decision}}\n\n## 選択肢\n\"\"\"\n{{options}}\n\"\"\"\n\n## 重視すること\n{{criteria}}\n\n## 制約\n{{constraints}}\n\n# 手順\n1. 評価軸を決め、重みを付ける（合計 100）。重視することがあればそれを重くする\n2. 制約を満たさない選択肢は、その時点で外し理由を書く\n3. 各選択肢を軸ごとに5段階で評価し、理由を書く\n4. 重み付きの合計で順位を出し、推奨を決める\n5. 推奨が入れ替わる条件（どの前提が変わったらか）を書く\n\n# 出力形式\n## 評価軸と重み\n| 軸 | 重み | なぜこの重みか |\n|---|---|---|\n\n## 比較\n| 選択肢 | 軸1 | 軸2 | … | 重み付き合計 |\n|---|---|---|---|---|\n（セルは「4: 理由」の形）\n\n## 推奨\n- 推奨: \n- 理由（3行）:\n- 推奨が変わる条件:\n\n## 決める前に確かめること\n\n# 守ること\n- 入力に無い情報（価格・機能）を推測で評価しない。分からないものは「不明」とし、評価から外したことを明記する\n- 推奨は1つに絞る\n\n# 最後に確認\n重みの合計が 100 か、「不明」が多い選択肢を高く評価していないかを確かめてから出す。","tips":"選択肢はカタログやWebページの内容を貼ると評価が具体的になります。\n上司への説明には、出てきた比較表と「推奨が変わる条件」がそのまま使えます。","example":"","gem":"","followups":[{"title":"重みを変えたら？","text":"費用を最も重視した場合と、使いやすさを最も重視した場合で、順位がどう変わるかを示してください。"}]},{"id":"proposal-outline","title":"企画書の骨子","category":"thinking","summary":"アイデアのメモから、企画書の項目を埋めた骨子と「要確認」を出す","recommendGem":false,"mdName":"企画書の骨子","order":3,"vars":[{"key":"idea","label":"アイデア・メモ","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"reader","label":"提出先","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 部長会 / 社長 / 取引先"},{"key":"constraints","label":"予算・期間などの条件","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは社内で企画を何本も通してきた企画担当です。メモから、決裁者が判断できる企画書の骨子を作ってください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 提出先\n{{reader}}\n\n## 予算・期間などの条件\n{{constraints}}\n\n## アイデア・メモ\n\"\"\"\n{{idea}}\n\"\"\"\n\n# 手順\n1. 企画の一文の要約を作る（誰の・何の課題を・どう解決し・何が良くなるか）\n2. 企画書の各項目をメモから埋める\n3. メモから埋まらない項目は「要確認」とし、何を調べれば埋まるかを書く\n4. 決裁者が気にする点（費用・効果・リスク）を厚めにする\n\n# 出力形式\n## 一文で言うと\n\n## 企画書の骨子\n| 項目 | 内容 | 根拠（メモのどこか）／要確認なら調べること |\n|---|---|---|\n| 背景 | | |\n| 課題 | | |\n| 目的・目標（数値） | | |\n| 提案内容 | | |\n| 期待する効果（数値） | | |\n| 実施計画（いつ・何を） | | |\n| 体制 | | |\n| 費用 | | |\n| リスクと対策 | | |\n| 判断してほしいこと | | |\n\n## 最初に埋めるべき「要確認」（3つ）\n\n# 守ること\n- メモに無い数字を作らない。目標や効果の数字が無ければ「要確認」とし、仮の置き方の例を添える\n- 提出先に合わせて言葉を選ぶ（社外なら社内用語を使わない）\n\n# 最後に確認\nすべての項目が埋まっているか「要確認」になっているかを確かめてから出す。","tips":"骨子ができたら「反論役の壁打ち」で弱点を洗い、「素材 → スライド骨子」でスライドにできます。","example":"","gem":"","followups":[{"title":"効果の数字が弱い","text":"期待する効果を数字で示すために、どのデータを使って、どう見積もればよいかを手順で示してください。"}]},{"id":"premortem","title":"事前検死（プレモーテム）","category":"thinking","summary":"「この計画が失敗したとしたら」から原因を洗い出し、予防策を決める","recommendGem":false,"mdName":"プレモーテム","order":4,"vars":[{"key":"plan","label":"計画","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"horizon","label":"いつの時点で振り返る想定か","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 半年後"}],"prompt":"# 役割\nあなたはプロジェクトの失敗例をたくさん見てきたリスク管理の専門家です。\n\n# 前提\nいまは{{horizon}}（指定なしなら半年後）。この計画は**大失敗に終わった**とします。なぜ失敗したのかを振り返ってください。\n\n# 入力\n## 計画\n\"\"\"\n{{plan}}\n\"\"\"\n\n# 手順\n1. 失敗の筋書きを5〜8個考える。人・お金・期限・技術・外部の変化・思い込み、の観点で偏りなく\n2. それぞれ、起きる前に出る兆候を考える\n3. 起きやすさと影響の大きさを評価する\n4. 予防策と、起きたときの対応を決める\n\n# 出力形式\n## 失敗の筋書き\n| No | 失敗の原因 | 起きる前の兆候 | 起きやすさ（高・中・低） | 影響（大・中・小） | 予防策 | 起きたときの対応 |\n|---|---|---|---|---|---|---|\n\n## 最優先で手を打つこと（3つ）\n起きやすさ×影響が大きいものから。担当と期限の欄を空けておく。\n\n## 計画に書き足すべきこと\n\n# 守ること\n- 計画の中身に即した原因を書く。どの計画にも当てはまる一般論は1つまでにする\n- 予防策は、明日から実行できる具体的な行動にする\n\n# 最後に確認\n最優先の3つが、表の中で起きやすさと影響の大きいものと一致しているかを確かめてから出す。","tips":"計画を立てた直後、関係者で集まる前に使うと、会議で話すべきリスクが先にそろいます。","example":"","gem":"","followups":[{"title":"想定が甘い","text":"最悪の場合（2つの失敗が同時に起きる）の筋書きを1つ作り、そのときの損失と対応を書いてください。"}]},{"id":"objection-prep","title":"反対意見への回答準備","category":"thinking","summary":"提案に対して出そうな反対意見を立場ごとに洗い、30秒の答えを用意する","recommendGem":false,"mdName":"反対意見への回答","order":5,"vars":[{"key":"proposal","label":"提案の内容","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"audience","label":"説明する相手と立場","multiline":true,"optional":false,"attachable":false,"placeholder":"例: 経理部長（費用に厳しい）、現場リーダー（手間が増えるのを嫌う）"}],"prompt":"# 役割\nあなたは根回しの上手な調整役です。提案の場で反対されても、落ち着いて答えられるよう準備してください。\n\n# 入力\n## 説明する相手と立場\n{{audience}}\n\n## 提案の内容\n\"\"\"\n{{proposal}}\n\"\"\"\n\n# 手順\n1. 相手の立場ごとに、提案で損をする点・不安に思う点を考える\n2. そこから出そうな反対意見を挙げる（表に出る言い方と、本音の懸念を分ける）\n3. 反対意見ごとに、30秒で言える答えと、用意しておく根拠を決める\n4. 事前に個別に話しておくべき相手を決める\n\n# 出力形式\n## 予想される反対意見\n| 反対意見（言い方） | 言いそうな人 | 本音の懸念 | 答え（30秒） | 用意する根拠 |\n|---|---|---|---|---|\n\n## 答えにくいもの\n- 今の提案では答えられない反対意見と、提案側で直せること\n\n## 事前に話しておく相手\n| 相手 | 話しておくこと | 引き出したい反応 |\n|---|---|---|\n\n# 守ること\n- 提案に無い約束（追加の予算・人員）を答えに使わない\n- 相手を言い負かす答えではなく、懸念を解く答えにする\n\n# 最後に確認\nすべての立場について反対意見が1つ以上あるか、答えに根拠があるかを確かめてから出す。","tips":"相手の立場は一言でも効きます。「本音の懸念」が分かると、会議の前の根回しが楽になります。","example":"","gem":"","followups":[{"title":"相手になりきって","text":"いちばん手ごわい相手になりきって、私の答えに再反論してください。私が答えたら、さらに続けてください。"}]},{"id":"request-clarify","title":"依頼内容の確認","category":"planning","summary":"上司や顧客からの依頼に対して、着手前に聞くべきことと確認の文面を出す","recommendGem":false,"mdName":"依頼の確認","order":1,"vars":[{"key":"request","label":"依頼の文面","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"requester","label":"依頼してきた人","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 部長 / 取引先の担当者"}],"prompt":"# 役割\nあなたは手戻りを嫌う段取り上手です。依頼を受けてすぐ着手する前に、認識のずれを潰してください。\n\n# 前提\n{{my.profile}}\n文体: {{my.tone}}\n\n# 入力\n## 依頼してきた人\n{{requester}}\n\n## 依頼の文面\n\"\"\"\n{{request}}\n\"\"\"\n\n# 手順\n1. 依頼を「目的」「成果物（形式・量）」「期限」「品質の基準」「使い道」「関係者」「予算・制約」に分けて読み取る\n2. 読み取れない・解釈が割れるものを挙げる\n3. 聞かないと作業が無駄になるものを優先度 A にする\n4. 相手が答えやすい形（選択肢つき）で確認の文面を作る\n5. 確認が取れないまま進める場合の仮置きを決める\n\n# 出力形式\n## 依頼の理解\n| 項目 | 読み取れたこと | 不明・曖昧な点 |\n|---|---|---|\n\n## 着手前に聞くこと\n| 優先度 | 聞くこと | 聞かないと起きること |\n|---|---|---|\n\n## 確認の文面（そのまま送れるもの）\n\n## 返事が来ない場合の仮置き\n- 「〜と仮定して進めます」と伝える内容\n\n# 守ること\n- 依頼の文面から読み取れることは聞かない\n- 確認は5つまでにする。それ以上は仮置きで進める\n\n# 最後に確認\n優先度 A の確認が文面に入っているか、文面が相手を責める調子になっていないかを確かめてから出す。","tips":"チャットで来た依頼をそのまま貼ってください。確認の後は「タスク分解」に進むと流れがスムーズです。","example":"","gem":"","followups":[{"title":"聞くことを減らしたい","text":"確認を2つまでに絞り、残りは仮置きにしてください。仮置きの内容は文面に一言添えてください。"}]},{"id":"task-breakdown","title":"タスク分解","category":"planning","summary":"ぼんやりした依頼を、作業・担当・期限・確認ポイントに分ける","recommendGem":false,"mdName":"タスク一覧","order":2,"vars":[{"key":"request","label":"依頼・目標","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"deadline","label":"最終期限","multiline":false,"optional":true,"attachable":false,"placeholder":""},{"key":"members","label":"関わる人","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 自分、田中さん（デザイン）、外注先"}],"prompt":"# 役割\nあなたは段取りの上手なプロジェクトリーダーです。依頼を、明日から手を動かせる作業の一覧にしてください。\n\n# 前提\n{{my.profile}}\n\n# 入力\n## 依頼・目標\n\"\"\"\n{{request}}\n\"\"\"\n\n## 最終期限\n{{deadline}}\n\n## 関わる人\n{{members}}\n\n# 手順\n1. ゴールと「完了の定義」（何がそろったら終わりか）を決める\n2. ゴールから逆算して作業を洗い出す。1つの作業は半日〜2日で終わる大きさにする\n3. 作業の順番と、前の作業が終わらないと始められない関係を整理する\n4. 担当・期限・成果物・確認ポイント（誰に見てもらうか）を付ける\n5. 遅れると全体が遅れる作業の並び（クリティカルパス）を示す\n\n# 出力形式\n## ゴールと完了の定義\n\n## 作業一覧\n| No | 作業 | 担当 | 期限 | 前提の作業 | 成果物 | 確認ポイント |\n|---|---|---|---|---|---|---|\n\n## 遅れてはいけない作業の並び\nNo.1 → No.3 → …\n\n## 最初の一手（今日やること）\n\n## 依頼者に確かめること\n\n# 守ること\n- 担当や期限が入力から決められないものは「未定」とする\n- 期限は最終期限から逆算し、最後に1〜2割の余裕を残す\n\n# 最後に確認\n作業をすべて終えると完了の定義を満たすか、期限が最終期限を超えていないかを確かめてから出す。","tips":"表はそのままスプレッドシートに貼ってタスク管理に使えます。\n依頼が曖昧なときは、先に「依頼内容の確認」を使うと手戻りが減ります。","example":"","gem":"","followups":[{"title":"作業が粗い","text":"期間が3日を超える作業を、さらに細かく分けてください。"}]},{"id":"sheet-formula","title":"スプレッドシートの関数作成","category":"numbers","summary":"やりたいことと表の構成から、数式と入れるセル・使い方を出す","recommendGem":false,"mdName":"","order":1,"vars":[{"key":"want","label":"やりたいこと","multiline":true,"optional":false,"attachable":false,"placeholder":"例: 担当者ごとに今月の売上合計を出したい"},{"key":"layout","label":"表の構成（列名と数行の例）","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"tool","label":"使うソフト","multiline":false,"optional":true,"attachable":false,"placeholder":"Google スプレッドシート / Excel"}],"prompt":"# 役割\nあなたは表計算の達人です。表計算に詳しくない人でもそのまま使えるように、数式と使い方を教えてください。\n\n# 入力\n## 使うソフト\n{{tool}}（指定なしなら Google スプレッドシート）\n\n## やりたいこと\n{{want}}\n\n## 表の構成（列名と数行の例）\n\"\"\"\n{{layout}}\n\"\"\"\n\n# 手順\n1. 表の構成から、列の位置（A列・B列…）とデータの範囲を確かめる\n2. やりたいことを実現する数式を、できるだけ単純な関数で作る\n3. 例のデータで計算した結果を示し、数式が正しいことを確かめる\n4. よくある失敗（範囲のずれ・文字列の数字・空白セル）と対処を書く\n\n# 出力形式\n## 数式\n```\n=…\n```\n- 入れるセル:\n- 下にコピーしてよいか:\n\n## 数式の読み方\n関数ごとに何をしているかを1行ずつ。\n\n## 例での結果\n| 入力 | 結果 |\n|---|---|\n\n## うまくいかないとき\n| 症状 | 原因 | 直し方 |\n|---|---|---|\n\n## 別のやり方（あれば）\nピボットテーブルやフィルタで済む場合はその手順。\n\n# 守ること\n- 使うソフトで動く関数だけを使う（Google スプレッドシート専用の関数を Excel で使わない）\n- 列の位置が入力から分からないときは、仮定した位置を明記する\n\n# 最後に確認\n例のデータで数式を実際に計算し、結果が合うことを確かめてから出す。","tips":"表の先頭数行をそのまま貼るのが一番確実です（列名つき）。中身はダミーでも構いません。","example":"","gem":"","followups":[{"title":"エラーが出た","text":"出たエラーの表示（#N/A など）と、数式を入れたセルを伝えるので、原因と直し方を教えてください。"}]},{"id":"table-insight","title":"表データの集計と示唆","category":"numbers","summary":"表を集計し、事実・解釈・打ち手を分けて示唆を出す","recommendGem":false,"mdName":"集計と示唆","order":2,"vars":[{"key":"table","label":"表データ","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"question","label":"知りたいこと","multiline":false,"optional":false,"attachable":false,"placeholder":"例: どの商品が伸びていて、何が落ちているか"}],"prompt":"# 役割\nあなたは事業部付きのデータアナリストです。数字から言えることと言えないことを分け、次の行動につながる示唆を出してください。\n\n# 入力\n## 知りたいこと\n{{question}}\n\n## 表データ\n\"\"\"\n{{table}}\n\"\"\"\n\n# 手順\n1. データの概要を確かめる（行数・列・期間・単位・欠けている値）\n2. 知りたいことに答える集計をする。計算はコードを実行するか、式を書いてから行う\n3. 結果を「事実（数字そのもの）」「解釈（なぜそうなったかの推測）」「打ち手」に分けて書く\n4. 結論の確かさを弱める要因（件数が少ない・外れ値・期間が短い）を挙げる\n\n# 出力形式\n## データの概要\n\n## 集計結果\n| 切り口 | 値 | 前期比など |\n|---|---|---|\n\n## 示唆\n| 事実 | 解釈（推測） | 打ち手 |\n|---|---|---|\n\n## 注意点\n\n## 追加で見るとよい切り口\n\n# 守ること\n- 事実と推測を混ぜない。推測には「推測」と書く\n- データに無い期間・項目について言わない\n- 数字は単位つきで書く\n\n# 最後に確認\n集計結果の数字を、もう一度計算して確かめてから出す。","tips":"Excel や CSV を添付すると、Gemini がコードで集計してくれることがあり、計算が正確になります。\n「知りたいこと」は1つに絞った方が、示唆が鋭くなります。","example":"","gem":"","followups":[{"title":"グラフにしたい","text":"この結果を伝えるのに最適なグラフを1つ選び、スプレッドシートで作る手順を教えてください。"}]},{"id":"chart-choice","title":"グラフの選び方","category":"numbers","summary":"データと伝えたいことから、最適なグラフと作り方・避けるべき見せ方を出す","recommendGem":false,"mdName":"","order":3,"vars":[{"key":"data_desc","label":"データの内容","multiline":true,"optional":false,"attachable":false,"placeholder":"例: 5商品の月別売上、12か月分"},{"key":"message","label":"伝えたいこと","multiline":false,"optional":false,"attachable":false,"placeholder":""},{"key":"audience","label":"見る人","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたはデータの見せ方の専門家です。伝えたいことが一目で伝わるグラフを選んでください。\n\n# 入力\n## データの内容\n{{data_desc}}\n\n## 伝えたいこと\n{{message}}\n\n## 見る人\n{{audience}}\n\n# 手順\n1. 伝えたいことの型を決める（大小の比較・時間の推移・内訳・分布・関係）\n2. 型に合うグラフを選び、次点も挙げる\n3. 作り方を具体的に決める（並び順、強調する色、ラベル、軸の範囲、単位、タイトル）\n4. このデータで誤解を生む見せ方を挙げる\n\n# 出力形式\n## おすすめ\n- グラフ:\n- 理由:\n- 次点:\n\n## 作り方\n| 項目 | 設定 |\n|---|---|\n| タイトル（結論の文） | |\n| 横軸 / 縦軸 | |\n| 並び順 | |\n| 色 | |\n| ラベル | |\n\n## 避けた方がよい見せ方\n\n# 守ること\n- 棒グラフの縦軸は0から始める\n- 色は強調したい1つにだけ付ける\n\n# 最後に確認\nおすすめのグラフで、伝えたいことが3秒で分かるかを確かめてから出す。","tips":"グラフを作る前に使ってください。作った後のグラフを直すときは「グラフの改善」が向いています。","example":"","gem":"","followups":[{"title":"もっと目を引く見せ方","text":"正確さを保ったまま、見る人の印象に残る見せ方を1つ提案してください。"}]},{"id":"manual-from-notes","title":"メモ → 手順書","category":"manual","summary":"口頭説明の文字起こしや操作メモから、迷わない手順書を作る","recommendGem":false,"mdName":"手順書","order":1,"vars":[{"key":"notes","label":"口頭説明・メモ","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"reader","label":"読む人","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 入社1か月目の事務スタッフ"},{"key":"system","label":"対象の業務・システム名","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたはマニュアル作りの専門家です。初めての人が一人で作業を終えられる手順書を作ってください。\n\n# 入力\n## 読む人\n{{reader}}\n\n## 対象の業務・システム名\n{{system}}\n\n## 口頭説明・メモ\n\"\"\"\n{{notes}}\n\"\"\"\n\n# 手順\n1. 作業の目的と、始める前にそろえるもの（権限・ファイル・情報）を拾う\n2. 操作を1手順1動作に分ける。「どの画面の・どこを・どうするか」と「うまくいったときの見え方」を書く\n3. 間違えやすい箇所と、困ったときの対処を拾う\n4. メモから分からない箇所を不明点として挙げる\n\n# 出力形式\n# {作業名} の手順書\n## 目的\n## 始める前に\n- 必要な権限・ファイル・情報\n## 手順\n| No | 操作 | 画面・場所 | 入力する値 | うまくいったときの見え方 |\n|---|---|---|---|---|\n## 間違えやすい点\n## 困ったとき\n| 症状 | 対処 | 聞く相手 |\n|---|---|---|\n## 作成者が確かめること\n- メモから分からなかった点\n\n# 守ること\n- メモに無い操作を足さない。抜けていそうな手順は「作成者が確かめること」に書く\n- 専門用語は読む人に合わせて言い換えるか、一言説明する\n\n# 最後に確認\n手順を上から順にたどって作業が終わるか（途中で抜けがないか）を確かめてから出す。","tips":"詳しい人に作業をしてもらいながら説明を録音し、その文字起こしを貼るのが一番速い作り方です。\n画面のスクリーンショットも添付すると、場所の説明が正確になります。","example":"","gem":"","followups":[{"title":"手順が粗い","text":"1つの手順に2つ以上の操作が入っているものを分けてください。"}]},{"id":"handover","title":"引き継ぎ資料","category":"manual","summary":"業務メモから、業務一覧・定期作業・関係者・進行中の案件・暗黙のルールをまとめる","recommendGem":false,"mdName":"引き継ぎ資料","order":2,"vars":[{"key":"materials","label":"業務のメモ・資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"successor","label":"引き継ぐ相手","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 他部署から来る中堅社員"},{"key":"date","label":"引き継ぎの期限","multiline":false,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは引き継ぎの段取りに慣れた先輩です。後任が初日から困らない引き継ぎ資料を作ってください。\n\n# 前提\n引き継ぐ人:\n{{my.profile}}\n\n# 入力\n## 引き継ぐ相手\n{{successor}}\n\n## 引き継ぎの期限\n{{date}}\n\n## 業務のメモ・資料\n\"\"\"\n{{materials}}\n\"\"\"\n\n# 手順\n1. 業務を洗い出し、頻度（毎日・毎週・毎月・年1回・都度）で分ける\n2. 業務ごとに、期限・所要時間・関係者・手順の場所を拾う\n3. 進行中の案件と、その状態・次の一手を拾う\n4. 書かれていないと困る暗黙のルールや注意点を拾う\n5. 引き継ぎの面談で確かめるべきことを挙げる\n\n# 出力形式\n## 業務一覧\n| 業務 | 頻度 | 期限・時期 | 所要時間 | 関係者 | 手順の場所 |\n|---|---|---|---|---|---|\n\n## 定期作業のカレンダー\n| 時期 | 作業 |\n|---|---|\n\n## 関係者\n| 名前・部署 | 何でやりとりするか | 注意点 |\n|---|---|---|\n\n## 進行中の案件\n| 案件 | 状態 | 次の一手 | 期限 |\n|---|---|---|---|\n\n## 注意点・暗黙のルール\n\n## 引き継ぎの面談で確かめること\n\n# 守ること\n- メモに無いことは推測で埋めず「不明」と書く\n- パスワードなどの秘密の情報は資料に書かず、「別途伝える」とする\n\n# 最後に確認\n年1回の業務や、時期が決まっている作業が漏れていないかを確かめてから出す。","tips":"異動の1か月前から、メールやチャットの履歴、手元のメモを貼って作り始めると漏れが減ります。","example":"","gem":"","followups":[{"title":"抜けがありそう","text":"年1回・半年に1回の業務（決算・監査・契約更新・棚卸しなど）が漏れていないか、もう一度メモを読み直してください。"}]},{"id":"whiteboard-ocr","title":"ホワイトボード・手書きメモ → テキスト","category":"image","summary":"写真の文字を配置どおりに起こし、矢印やグループの構造も文章にする","recommendGem":false,"mdName":"ホワイトボード","order":1,"vars":[{"key":"image","label":"写真","multiline":false,"optional":false,"attachable":true,"placeholder":""},{"key":"purpose","label":"何に使うか","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 会議の記録として議事録に入れる"}],"prompt":"# 役割\nあなたは手書き文字の読み取りが得意な書記です。写真に書かれた内容を、漏れなく正確にテキストにしてください。\n\n# 入力\n## 写真\n{{image}}\n\n## 何に使うか\n{{purpose}}\n\n# 手順\n1. 写真全体を見て、書かれている領域（枠・列・付箋のかたまり）を把握する\n2. 領域ごとに、上から下・左から右の順で文字を起こす\n3. 矢印・線・丸囲み・色の違いなどの構造を読み取り、言葉で表す\n4. 読めない文字は推測で埋めず、[判読不可] とする。候補があれば [判読不可: 〇〇?] とする\n\n# 出力形式\n## 文字起こし（配置どおり）\n領域ごとに見出しを立てて箇条書き。\n\n## 構造\n- 「A → B」「C と D は同じグループ（青の丸）」のように\n\n## 整理した要点\n目的に合わせて3〜5行。\n\n## 読めなかった箇所\n| 位置 | 読めた部分 | 候補 |\n|---|---|---|\n\n# 守ること\n- 書かれていない言葉を補わない（整理した要点を除く）\n- 数字・日付・人名は特に慎重に読み、自信がなければ [判読不可] にする\n\n# 最後に確認\n写真のすべての領域を起こしたかを確かめてから出す。","tips":"正面から、ボード全体が入るように撮ると精度が上がります。字が小さい部分は寄った写真も一緒に添付してください。","example":"","gem":"","followups":[{"title":"議事録にしたい","text":"この内容を、決定事項・ToDo・論点に分けた議事録の形に整えてください。"}]},{"id":"screenshot-error","title":"スクショからエラーの原因推定","category":"image","summary":"エラー画面のスクリーンショットから、意味・原因の候補・安全な解決手順を出す","recommendGem":false,"mdName":"","order":2,"vars":[{"key":"image","label":"エラー画面のスクリーンショット","multiline":false,"optional":false,"attachable":true,"placeholder":""},{"key":"situation","label":"何をしたときに出たか","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"env","label":"使っている環境","multiline":false,"optional":true,"attachable":false,"placeholder":"例: Windows 11、Excel（Microsoft 365）、社内の経費システム"}],"prompt":"# 役割\nあなたは社内のヘルプデスク担当です。パソコンに詳しくない人にも分かる言葉で、エラーの意味と直し方を説明してください。\n\n# 入力\n## スクリーンショット\n{{image}}\n\n## 何をしたときに出たか\n{{situation}}\n\n## 使っている環境\n{{env}}\n\n# 手順\n1. 画面のエラーメッセージを原文のまま書き出す\n2. メッセージの意味を分かりやすい言葉で説明する\n3. 原因の候補を、可能性の高い順に挙げる。それぞれ確かめ方を書く\n4. 解決の手順を、安全なもの（再起動・再ログインなど）から順に書く\n5. 自分で直せないときの、問い合わせの文面を作る\n\n# 出力形式\n## エラーの原文\n\n## 意味（2行）\n\n## 原因の候補\n| 可能性 | 原因 | 確かめ方 |\n|---|---|---|\n\n## 解決の手順\n1. …（各手順の後に「これで直ったら終わり」と書く）\n\n## 問い合わせの文面\n情報システム部門などにそのまま送れるもの（起きたこと・時刻・画面・試したこと）。\n\n# 守ること\n- データが消える・設定を大きく変える手順は、最後に回し「実行前に担当部署に確認」と書く\n- 画面から読み取れないことは決めつけない\n\n# 最後に確認\n解決の手順が安全な順に並んでいるかを確かめてから出す。","tips":"Windows なら「Windows キー + Shift + S」で画面の一部を撮れます。エラーの直前に何をしたかを書くほど、原因が絞れます。","example":"","gem":"","followups":[{"title":"直らなかった","text":"試した手順と、その結果の画面を伝えるので、次に試すことを教えてください。"}]},{"id":"key-visual","title":"キービジュアルの画像生成指示","category":"image","summary":"形容詞ではなく、主役の物・構図・視線の順番・光・素材・媒体で指示する画像生成プロンプトを、方向の違う3案で作る","recommendGem":false,"mdName":"","order":9,"vars":[{"key":"concept","label":"伝えたいこと","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 問い合わせ AI で、社内の質問が滞らずに流れるようになる"},{"key":"usage","label":"使う場所と媒体","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 社内提案スライドの表紙。プロジェクターで投影。16:9"},{"key":"subject","label":"主役にしたい物","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 透明な水路（空欄ならおまかせ）"},{"key":"copy_space","label":"文字を載せる場所","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 左側40%にタイトルを置く"},{"key":"colors","label":"色の指定","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 紺を基調に、アクセントは1色だけ"},{"key":"avoid","label":"避けたいもの","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 人物、光る粒子、ネオン、回路の模様"}],"prompt":"# 役割\nあなたは広告写真のアートディレクターです。「かっこよく」「高級感」のような形容詞ではなく、物・配置・光・素材の言葉で、画像生成 AI が迷わない指示を作ってください。\n\n# 入力\n## 伝えたいこと\n{{concept}}\n\n## 使う場所と媒体\n{{usage}}\n\n## 主役にしたい物\n{{subject}}（指定なしなら、伝えたいことを最も短く表す物を1つ選ぶ）\n\n## 文字を載せる場所\n{{copy_space}}（指定なしなら、媒体に合わせて決める）\n\n## 色の指定\n{{colors}}\n\n## 避けたいもの\n{{avoid}}\n\n# 手順\n1. 媒体から逆算する: 見られる大きさと時間（例: スマホで一瞬 / 投影で数分 / 印刷して手元）から、主役の大きさ、余白、細かさの限度を決める\n2. 主役の物を1つに決める。周りに置く物は、主役と競合しないものだけにする\n3. 次の項目を具体的に決める: 主役の位置と画面に占める割合 / 文字を載せる余白の位置と広さ / 視線の順番（どこから入り、どこで止まるか）/ 撮る角度と距離 / レンズの感じ（35mm・50mm・85mm・マクロなど）/ 光の向きと質 / 主役の素材と表面の様子 / 色の数\n4. 必要なら、主役に「意味は通るが、物理的には矛盾する性質」を1つだけ与える（例: 固い回路が水のように流れる）。伝えたいことの理解にどう役立つかを一文で説明できない場合は使わない\n5. 考え方の違う3案を作る: A 写真として実在しそうな案 / B 物理法則が1つだけ外れている案 / C 古い素材と新しい技術を組み合わせた案\n6. 3案を比べ、用途に最も合う1案を推奨し、仕上げの指示を書く\n\n# 出力形式\n## 1. 媒体からの条件（3行）\n\n## 2. 3案\n### 案A: （名前）\n**画像生成 AI に貼る指示**（そのまま貼れる文。日本語と英語の両方）\n**ねらい**: 伝えたいことがどう伝わるか（1行）\n\n（案B・案C も同じ形で）\n\n## 3. 比較\n| 観点 | 案A | 案B | 案C |\n|---|---|---|---|\n| ひと目で主役が分かるか | | | |\n| 伝えたいことが伝わるか | | | |\n| 文字を載せやすいか | | | |\n| 小さく表示しても形が分かるか | | | |\n| ありがちな AI 画像に見えないか | | | |\n\n## 4. 推奨と仕上げの指示\n推奨する案と理由、出てきた画像を直すときの指示の例（「◯◯は問題ない。△△が問題なので、□□を◯%にする」の形）。\n\n# 守ること\n- 指示に「かっこいい」「高級感」「おしゃれ」「未来的」などの形容詞だけの言葉を使わない。使いたいときは、物・配置・光・素材の言葉に置き換える\n- 画像に文字・ロゴ・透かしを描かせない（文字は後から載せる）\n- 実在の人物・作品・ブランドに似せる指示を入れない\n- カメラやレンズの用語は、結果に効くものだけにする（並べすぎると崩れる）\n- 避けたいものは、指示の最後に「入れないもの」としてまとめる\n- 入力から決められないことは推測で埋めず、「不明」と書いたうえで仮の案を示す\n\n# 最後に確認\n3案とも主役が1つか、文字を載せる余白が指示に入っているか、形容詞だけの言葉が残っていないかを確かめてから出す。","tips":"出てきた指示は、Gemini の画像生成（Imagen）や、スライド・Canva の画像生成にそのまま貼れます。\n画像が思ったものと違ったら、作り直しを頼まずに「何が問題で、何は問題でないか」を書いて部分的に直させると、狙いに近づきます（共通の追い指示「却下理由を条件にして直す」）。\nAI が予想外に描いた部分は、全部消さずに「崩れ（直す）/ ずれ（検討する）/ 発見（残す）」に分けて見ると、良い案が残ります。","example":"## 1. 媒体からの条件\nプロジェクターで数分映す表紙なので、主役は画面の半分程度まで大きくしてよい。\n左40%にタイトルを置くため、その範囲は均一な暗い面にする。\n細かい模様は投影で潰れるので、素材の質感は大きな面で見せる。\n\n## 2. 3案\n### 案B: 流れる回路\n**画像生成 AI に貼る指示**\n暗い紺の無地の空間。画面右側に、金属の回路基板が1枚、斜め45度から見える。基板の配線の溝の中を、透明な水が流れている。光は左上からの大きな拡散光。左側40%は何も置かない均一な紺。被写界深度は浅め、50mm 相当。入れないもの: 文字、人物、光る粒子、ネオン。\n**ねらい**: 固いはずの仕組みの中を、情報が滞らずに流れる様子を一枚で見せる。","gem":"","followups":[{"title":"主役が目立たない","text":"主役以外の物をすべて外し、主役の占める割合を今より大きくした指示に書き直してください。"},{"title":"投影すると暗い","text":"明るさの差（コントラスト）を上げ、暗部にも素材の様子が見えるよう、光の指示を書き直してください。"}]},{"id":"deep-research-brief","title":"Deep Research の依頼文","category":"research","summary":"範囲・期間・出典の条件・出力形式を決めた調査依頼を Deep Research に渡す","recommendGem":false,"mdName":"","order":999,"vars":[{"key":"theme","label":"調べたいテーマ","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 中堅企業の生成 AI 導入の進め方"},{"key":"purpose","label":"調査の目的・使い道","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 来期の社内導入計画の根拠にする"},{"key":"scope","label":"範囲","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 日本国内、従業員 300〜1000 人の企業"},{"key":"period","label":"対象期間","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 2024年以降"},{"key":"must","label":"必ず含めたい観点","multiline":true,"optional":true,"attachable":false,"placeholder":""}],"prompt":"# 調査の依頼\n次のテーマについて調査し、レポートにまとめてください。\n\n## テーマ\n{{theme}}\n\n## 目的・使い道\n{{purpose}}\n\n## 範囲\n{{scope}}\n\n## 対象期間\n{{period}}\n\n## 必ず含めたい観点\n{{must}}\n\n# 調査の進め方\n1. 最初に、調べる問いを5つ前後に分けて示してから調べ始める\n2. 一次情報（公的機関・企業の公式発表・論文・調査会社の報告書）を優先する。個人のブログやまとめサイトは補足にとどめる\n3. 情報ごとに発行元と日付を確かめる。対象期間より古い情報は「古い情報」と明記する\n4. 情報源どうしで食い違う点は、両方を示す\n\n# レポートの形式\n## 1. 要約（5行）\n## 2. 主要な発見\n発見ごとに: 内容 / 根拠となる出典の番号\n## 3. 比較表（比べられるものがある場合）\n## 4. 目的に照らした示唆\n## 5. 分からなかったこと・不確かな点\n## 6. 出典一覧\n| 番号 | タイトル | 発行元 | 日付 | URL |\n|---|---|---|---|---|\n\n# 守ること\n- 事実には必ず出典の番号を付ける。出典の無い記述は「推測」と明記する\n- 数字は出典どおりに書き、単位と時点を添える\n- 日本語で書く","tips":"Gemini の Deep Research を選んでから貼ってください。最初に調査計画が出るので、問いがずれていればそこで直してもらいます。\nレポートが出たら、「出力の自己検証」で大事な数字を出典と突き合わせると安心です。","example":"","gem":"","followups":[{"title":"出典が弱い","text":"個人のブログやまとめサイトを根拠にしている箇所を、公的機関や企業の公式発表で裏付け直してください。見つからない場合は「裏付けなし」としてください。"},{"title":"表にまとめたい","text":"主要な発見を、スプレッドシートに貼れる表（列: 発見 / 数字 / 時点 / 出典）にしてください。"}]},{"id":"announcement","title":"社内告知・案内文","category":"notice","summary":"結論を先に、5W1H と読み手にしてほしいことが一目で分かる告知を作る","recommendGem":false,"mdName":"","order":1,"vars":[{"key":"what","label":"告知の内容","multiline":true,"optional":false,"attachable":false,"placeholder":"何を・いつ・どこで・誰が・なぜ"},{"key":"audience","label":"読み手","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 全社員 / 営業部の課長以上"},{"key":"action","label":"読み手にしてほしいこと","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 11/20 までにフォームで出欠を回答"}],"prompt":"# 役割\nあなたは社内広報の担当者です。忙しい社員が件名と最初の3行だけで用件を理解し、行動できる告知文を作ってください。\n\n# 前提\n差出人:\n{{my.profile}}\n文体: {{my.tone}}\n\n# 入力\n## 読み手\n{{audience}}\n\n## 告知の内容\n\"\"\"\n{{what}}\n\"\"\"\n\n## 読み手にしてほしいこと\n{{action}}\n\n# 手順\n1. 件名に、用件と期限（してほしいことがあれば）を入れる\n2. 本文の最初の3行に、何のお知らせか・読み手に関係すること・してほしいことを書く\n3. 詳細を 5W1H の表にまとめる\n4. 問い合わせ先を書く\n\n# 出力形式\n## メール・掲示板用\n件名: 【〇〇】…（〆切 ◯/◯）\n本文:\n（最初の3行）\n（詳細の表: 何を / いつ / どこで / 対象 / 内容 / 申込・回答方法）\n（問い合わせ先）\n\n## チャット用（150字以内）\n\n# 守ること\n- 入力に無い日時・場所・締め切りを作らない。必要なら【要確認】と書く\n- 「ご確認ください」だけで終わらせず、何をすればよいかを書く\n\n# 最後に確認\n件名と最初の3行だけで、用件と期限が分かるかを確かめてから出す。","tips":"説明会・研修・制度変更・システム停止のお知らせなどに使えます。メモ書きの内容で十分です。","example":"","gem":"","followups":[{"title":"読まれなさそう","text":"件名を、読み手が自分に関係あると分かる言い方に3案出してください。"}]},{"id":"faq","title":"FAQ の作成","category":"notice","summary":"資料から、読み手の言葉で質問を立てた FAQ を作る。答えられない質問も挙げる","recommendGem":false,"mdName":"FAQ","order":2,"vars":[{"key":"material","label":"元の資料（制度・サービスの説明など）","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"audience","label":"読み手","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 新しい経費精算システムを使う全社員"}],"prompt":"# 役割\nあなたは問い合わせ窓口の経験が長い担当者です。読み手が実際に聞いてきそうな質問と、資料にもとづく答えをまとめてください。\n\n# 入力\n## 読み手\n{{audience}}\n\n## 元の資料\n\"\"\"\n{{material}}\n\"\"\"\n\n# 手順\n1. 読み手の立場で、資料を読んで迷いそうな点・不安になりそうな点を考える\n2. 質問を読み手の言葉で書く（例: ×「申請フローについて」→ ○「申請したのに承認されないときはどうすればいいですか」）\n3. 資料にもとづいて答える。答えは結論から、3行以内で\n4. 資料では答えられない質問を別に挙げる\n\n# 出力形式\n## FAQ（10〜15問）\n| No | カテゴリ | 質問 | 答え | 資料の該当箇所 |\n|---|---|---|---|---|\n\n## 資料では答えられない質問\n| 質問 | 答えるために必要な情報 | 確認する相手 |\n|---|---|---|\n\n# 守ること\n- 資料に無いことを答えに書かない\n- よく聞かれそうな順に並べる\n\n# 最後に確認\nすべての答えに資料の該当箇所があるかを確かめてから出す。","tips":"制度の変更やシステムの導入の前に作っておくと、問い合わせが減ります。「資料では答えられない質問」は、資料の改善点でもあります。","example":"","gem":"","followups":[{"title":"質問が堅い","text":"質問を、困っている人がチャットで聞くような口語に書き直してください。"}]},{"id":"key-cards","title":"要点カード","category":"training","summary":"資料を、一言・詳しく・例・間違えやすい点の4段で覚えやすいカードにする","recommendGem":false,"mdName":"要点カード","order":1,"vars":[{"key":"material","label":"資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"count","label":"カードの枚数","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 10"}],"prompt":"# 役割\nあなたは教え方の上手な先輩です。資料の要点を、すき間時間に読み返せるカードにしてください。\n\n# 入力\n## カードの枚数\n{{count}}（指定なしなら 8〜12 枚）\n\n## 資料\n\"\"\"\n{{material}}\n\"\"\"\n\n# 手順\n1. 資料全体の地図（何がどの順で書かれているか）を作る\n2. 業務で使う要点を選び、1カード1要点にする\n3. カードごとに、一言・詳しく・例・間違えやすい点を書く\n\n# 出力形式\n## 全体の地図\n3〜5行。\n\n## カード\n### カード {番号}: {見出し}\n- 一言で: （20字以内）\n- 詳しく: （2〜3行）\n- 例: \n- 間違えやすい点: \n- 資料の該当箇所: \n\n# 守ること\n- 資料に無いことを書かない（「例」は資料に無ければ作ってよいが「作った例」と書く）\n- 専門用語は一言で説明する\n\n# 最後に確認\nカードの「一言で」だけを読んで、資料の要点がつかめるかを確かめてから出す。","tips":"新しい制度や商品の勉強、資格の勉強に向いています。続けて「確認テストの作成」を使うと、覚えたかを確かめられます。","example":"","gem":"","followups":[{"title":"覚えにくい","text":"「一言で」を、語呂合わせや身近なたとえにした版を作ってください。"}]},{"id":"quiz","title":"確認テストの作成","category":"training","summary":"研修資料から、解説と根拠つきの確認テストを作る。回答用紙と解答を分けて出す","recommendGem":false,"mdName":"確認テスト","order":2,"vars":[{"key":"material","label":"研修資料","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"level","label":"受ける人","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 新入社員 / 入社3年目の営業"},{"key":"count","label":"問題数","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 10"},{"key":"qtype","label":"問題の形式","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 4択 / ○× / 記述 / 混ぜる"}],"prompt":"# 役割\nあなたは研修の設計者です。資料の大事なところを理解できたかを確かめるテストを作ってください。\n\n# 入力\n## 受ける人\n{{level}}\n\n## 問題数\n{{count}}（指定なしなら10問）\n\n## 問題の形式\n{{qtype}}（指定なしなら4択を中心に、○×と記述を少し）\n\n## 研修資料\n\"\"\"\n{{material}}\n\"\"\"\n\n# 手順\n1. 資料の中で、業務で間違えると困る要点を選ぶ\n2. 要点ごとに問題を作る。暗記だけでなく「この場合どうするか」を問う問題を半分以上にする\n3. 4択の誤りの選択肢は、よくある勘違いをもとにする\n4. 解説と、資料の根拠の箇所を付ける\n\n# 出力形式\n## 回答用紙（正解なし）\n問題文と選択肢だけ。\n\n## 解答と解説\n| No | 正解 | 解説（なぜ正解か・なぜ他が誤りか） | 資料の該当箇所 | 問うている要点 |\n|---|---|---|---|---|\n\n# 守ること\n- 資料に無い知識を問わない\n- 引っかけ問題にしない（言葉遊びで間違えさせない）\n- 正解が1つに決まるようにする\n\n# 最後に確認\nすべての問題の正解が資料で裏付けられるかを確かめてから出す。","tips":"回答用紙は Google フォームのテストにそのまま写せます。研修の前と後で同じテストをすると、理解度の変化が分かります。","example":"","gem":"","followups":[{"title":"簡単すぎる","text":"業務の場面を想定した応用問題に作り直してください。"}]},{"id":"translate","title":"翻訳（用語統一つき）","category":"translate","summary":"用途に合わせて訳し、用語の対応表と訳しにくかった箇所を付ける","recommendGem":true,"mdName":"","order":1,"vars":[{"key":"text","label":"原文","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"direction","label":"翻訳の向き","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 日本語 → 英語"},{"key":"purpose","label":"用途","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 海外拠点への社内資料 / 契約書の参考訳 / Web サイト"},{"key":"glossary","label":"決まっている訳語","multiline":true,"optional":true,"attachable":false,"placeholder":"例: 帰社日 = Company Day"}],"prompt":"# 役割\nあなたはビジネス文書に強いプロの翻訳者です。用途に合った自然な訳文にしてください。\n\n# 入力\n## 翻訳の向き\n{{direction}}\n\n## 用途\n{{purpose}}\n\n## 決まっている訳語\n{{glossary}}\n\n## 原文\n\"\"\"\n{{text}}\n\"\"\"\n\n# 手順\n1. 用途から、訳の硬さ（直訳寄りか、意訳寄りか）を決める。契約書なら正確さ優先、Web なら読みやすさ優先\n2. 原文の固有名詞・専門用語を拾い、訳語を決める。決まっている訳語があれば必ず使う\n3. 訳す。原文の段落・箇条書きの構造は保つ\n4. 文化や前提の違いで、そのまま訳すと通じない箇所を挙げる\n\n# 出力形式\n## 訳文\n\n## 用語の対応表\n| 原文 | 訳語 | メモ |\n|---|---|---|\n\n## 訳しにくかった箇所\n| 原文 | 訳 | 判断の理由・他の訳し方 |\n|---|---|---|\n\n# 守ること\n- 数字・日付・金額・固有名詞は正確に移す（日付の書式は訳先の慣習に合わせる）\n- 原文に無い情報を足さない\n\n# 最後に確認\n訳文の数字と固有名詞が原文と一致しているか、決まっている訳語が使われているかを確かめてから出す。","tips":"社内でよく使う訳語は「決まっている訳語」に書いて Gem に登録すると、訳がそろいます。\n契約書などの正式な文書は、参考訳として使い、最終確認は専門家に依頼してください。","example":"","gem":"","followups":[{"title":"不自然","text":"意味は変えずに、訳先の言語のネイティブが書いたように自然な文に直してください。"}]},{"id":"english-mail","title":"英文メール","category":"translate","summary":"日本語で用件を書くと、英文メールと日本語訳・表現のポイントを出す。返信にも使える","recommendGem":false,"mdName":"","order":2,"vars":[{"key":"situation","label":"用件（日本語で）","multiline":true,"optional":false,"attachable":false,"placeholder":""},{"key":"recipient","label":"相手と関係","multiline":false,"optional":false,"attachable":false,"placeholder":"例: 海外の取引先の担当者。初めて連絡する"},{"key":"received","label":"返信する元の英文メール","multiline":true,"optional":true,"attachable":false,"placeholder":""},{"key":"tone","label":"丁寧さ","multiline":false,"optional":true,"attachable":false,"placeholder":"例: フォーマル / 少しくだけた"}],"prompt":"# 役割\nあなたはビジネス英語に慣れた秘書です。相手に失礼がなく、意図が正確に伝わる英文メールを書いてください。\n\n# 前提\n差出人:\n{{my.profile}}\n\n# 入力\n## 相手と関係\n{{recipient}}\n\n## 丁寧さ\n{{tone}}\n\n## 用件（日本語で）\n\"\"\"\n{{situation}}\n\"\"\"\n\n## 返信する元の英文メール\n\"\"\"\n{{received}}\n\"\"\"\n\n# 手順\n1. 返信の場合は、元のメールの要点と、聞かれていることを日本語でまとめる\n2. 用件を、結論が先に来る英文の構成にする\n3. 相手との関係と丁寧さに合わせて、決まった言い回しを選ぶ\n4. 日本語訳を付けて、意図どおりかを私が確かめられるようにする\n\n# 出力形式\n## 元のメールの要点（返信の場合）\n\n## 英文メール\nSubject:\n本文:\n\n## 日本語訳\n\n## 表現のポイント\n| 英語 | 意味・使いどころ |\n|---|---|\n\n# 守ること\n- 用件に無い約束・日付・金額を書かない。必要なら [TBD] とし、日本語で注記する\n- 日本語の「よろしくお願いします」を直訳しない。場面に合った締めにする\n\n# 最後に確認\n英文と日本語訳の内容が一致しているか、元のメールの質問に全部答えているかを確かめてから出す。","tips":"受信した英文メールを貼ると、要点の日本語訳と返信がまとめて出ます。","example":"","gem":"","followups":[{"title":"もっと簡潔に","text":"英文を半分の長さにしてください。用件と依頼だけを残してください。"}]},{"id":"prompt-rewrite","title":"雑な指示 → 良いプロンプト","category":"meta","summary":"思いついたままの指示を、役割・手順・出力形式つきのプロンプトに書き直す","recommendGem":false,"mdName":"","order":1,"vars":[{"key":"rough","label":"雑な指示","multiline":true,"optional":false,"attachable":false,"placeholder":"例: この資料いい感じにまとめて"},{"key":"material","label":"使う素材の種類","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 30ページの PDF の提案書"},{"key":"use","label":"出力の使い道","multiline":false,"optional":true,"attachable":false,"placeholder":"例: 部長への報告メールに貼る"}],"prompt":"# 役割\nあなたはプロンプト設計の専門家です。私の雑な指示を、毎回同じ品質の出力が得られるプロンプトに書き直してください。\n\n# 入力\n## 雑な指示\n\"\"\"\n{{rough}}\n\"\"\"\n\n## 使う素材の種類\n{{material}}\n\n## 出力の使い道\n{{use}}\n\n# 手順\n1. 指示から、目的・読み手・使い道を読み取る。読み取れないものは質問に回す\n2. 次の型でプロンプトを書く\n   - 役割（誰として振る舞うか）\n   - 目的（何のための作業か）\n   - 入力（素材をどこに貼るか。「\"\"\"」で囲む）\n   - 手順（番号付き）\n   - 出力形式（見出し・表の列を固定）\n   - 守ること（推測で埋めない、など）\n   - 最後に確認（出す前の自己点検）\n3. 素材を入れる箇所を {素材} のように示す\n\n# 出力形式\n## 書き直したプロンプト\n```\n（そのままコピーして使えるもの）\n```\n\n## 変えた点と理由\n- 何を足したか、なぜ出力が安定するか\n\n## 決めておくとさらに良くなること\n- 私に確かめたいこと（3つまで）\n\n# 守ること\n- 指示の意図を変えない\n- 長すぎるプロンプトにしない（目安 600 字まで）\n\n# 最後に確認\n書き直したプロンプトに「出力形式」と「推測で埋めない」指示が入っているかを確かめてから出す。","tips":"良いプロンプトができたら、Gem に登録すると毎回使えます。\nこのプロンプト集に足したいときは、使い方タブの「自分でプロンプトを足す」を見てください。","example":"","gem":"","followups":[{"title":"もっと短く","text":"同じ効果を保ったまま、300字以内に縮めてください。"}]},{"id":"output-verify","title":"出力の自己検証","category":"meta","summary":"AI の出力を元の素材と突き合わせ、根拠のない記述・矛盾・抜けを洗い出す","recommendGem":false,"mdName":"検証結果","order":2,"vars":[{"key":"source","label":"元の素材","multiline":true,"optional":false,"attachable":true,"placeholder":""},{"key":"output","label":"AI の出力","multiline":true,"optional":false,"attachable":false,"placeholder":""}],"prompt":"# 役割\nあなたは厳しい事実確認の担当者です。AI が作った文章を、元の素材と一文ずつ突き合わせてください。\n\n# 入力\n## 元の素材\n\"\"\"\n{{source}}\n\"\"\"\n\n## AI の出力\n\"\"\"\n{{output}}\n\"\"\"\n\n# 手順\n1. 出力を、事実を述べている文ごとに分ける\n2. 文ごとに、元の素材に根拠があるかを確かめる\n3. 判定する: 根拠あり / 根拠なし（素材に無い）/ 素材と矛盾 / 言い過ぎ（素材より強く言っている）\n4. 素材にある重要な情報で、出力から抜けているものを探す\n5. 問題を直した版を作る\n\n# 出力形式\n## 判定\n| No | 出力の記述 | 判定 | 素材の該当箇所（短い引用） | コメント |\n|---|---|---|---|---|\n\n## 抜けている重要な情報\n\n## 直した版\n\n# 守ること\n- 判定は素材だけを基準にする。一般常識で正しくても、素材に無ければ「根拠なし」とする\n- 直した版では、根拠のない記述を削るか「要確認」と書く\n\n# 最後に確認\n「根拠あり」とした行に、すべて素材の引用があるかを確かめてから出す。","tips":"議事録や要約を人に渡す前のチェックに使います。\n出力を作った会話とは別の、新しい会話で使うと、より厳しく見てくれます。","example":"","gem":"","followups":[{"title":"判定が甘い","text":"「根拠あり」とした行を、素材の文言と一字一句比べて見直してください。数字・日付・人名を特に確かめてください。"}]}],"chains":[{"name":"会議を一通り回す","description":"会議の前の準備から、議事録・共有・振り返りまで。前の出力を次の素材欄に貼って進めます。","steps":["meeting-prep","agenda","transcript-clean","minutes","followup-mail","meeting-retro"]},{"name":"資料を読んで報告する","description":"受け取った資料を読み解き、相手に確認し、上司に報告するまで。","steps":["doc-known-unknown","question-list","boss-report"]},{"name":"スライドを作る","description":"素材から骨子を作り、流れを確かめてから Google スライドで1枚ずつ作り、発表の準備をするまで。","steps":["ppt-outline","story-check","slides-gemini-instructions","speaker-notes-qa"]},{"name":"既存のスライドを直す","description":"手元の資料を診断し、問題の大きいスライドから直し、最後に1枚のサマリーを付けるまで。","steps":["ppt-brushup-diagnosis","slide-single-improve","chart-improve","exec-summary"]},{"name":"依頼を受けて進める","description":"依頼の中身を確かめ、作業に分け、週報で報告するまで。","steps":["request-clarify","task-breakdown","weekly-report"]},{"name":"企画を通す","description":"アイデアを企画書の骨子にし、弱点と反対意見に備えてからスライドにするまで。","steps":["proposal-outline","devil-advocate","premortem","objection-prep","ppt-outline"]},{"name":"画面のデザインを直す","description":"採点で問題を洗い、デザインを直し、アクセシビリティとスマホ表示を確かめるまで。","steps":["ui-score-review","html-design-improve","a11y-check","mobile-check"]},{"name":"調べてまとめる","description":"Deep Research で調べ、出典を確かめ、要約して報告するまで。","steps":["deep-research-brief","output-verify","tiered-summary","boss-report"]},{"name":"動かせる HTML スライドを作る","description":"骨子を作り、流れを確かめてから、前提を動かせて出典をその場で見せられる HTML スライドにするまで。","steps":["ppt-outline","story-check","interactive-slides"]},{"name":"キービジュアルを作る","description":"骨子で伝えたいことを決め、表紙や LP に使う画像の生成指示を3案で作るまで。","steps":["ppt-outline","key-visual"]},{"name":"NotebookLM の質問箱を回す","description":"入れる資料を点検し、NotebookLM に型どおりに質問し、回答を台帳にし、要確認を確認先に聞き、返事で台帳を更新して、決まったことを NotebookLM に戻すまで。","steps":["qa-source-check","qa-ask","qa-ledger","question-list","qa-ledger-update","qa-digest"]},{"name":"質問箱の状況を共有する","description":"台帳を更新し、決めたことを記録し、シートや HTML で見ながら上司に確認状況を報告するまで。","steps":["qa-ledger-update","qa-decision-log","qa-ledger-sheet","qa-ledger-html","qa-status-report","boss-report"]},{"name":"案件の言葉をそろえる","description":"回答や資料のあいまいな言葉を拾って意味を決め、決まっていない言葉を台帳に足すまで。","steps":["qa-glossary","qa-ledger-update"]}],"followups":[{"title":"長すぎる","text":"いまの出力を半分の長さにしてください。表と見出しの構成はそのままにして、各項目の文を短くしてください。"},{"title":"推測が混じっている","text":"素材に書かれていないことを書いている箇所をすべて挙げてください。そのうえで、それらを削るか「不明」「要確認」に置き換えた版を出してください。"},{"title":"根拠を示してほしい","text":"出力の各項目について、素材のどこにもとづいているかを、短い引用で示してください。"},{"title":"形式が崩れた","text":"最初に指定した出力形式（見出しと表の列）にそろえて、出し直してください。内容は変えないでください。"},{"title":"途中で切れた","text":"続きを、切れたところの直前から出してください。最初から出し直さないでください。"},{"title":"抜けがある","text":"素材をもう一度最初から最後まで読み直して、出力に入っていない重要な情報を挙げ、それを加えた版を出してください。"},{"title":"一般論になっている","text":"この素材に固有の内容（固有名詞・数字・具体的な発言や記述）を使って書き直してください。どの素材にも当てはまる文は削ってください。"},{"title":"表をスプレッドシートに貼りたい","text":"表だけを、タブ区切りのテキスト（1行目が見出し）で出してください。説明の文は要りません。"},{"title":"別の案も見たい","text":"いまの案とは考え方の違う案を2つ出し、3つの案を比べる表（長所・短所・向いている場面）を付けてください。"},{"title":"前提を伝え直す","text":"次の前提を踏まえて、出力をやり直してください。\n前提: （ここに書き足す）"},{"title":"却下理由を条件にして直す","text":"いまの出力は採用しません。作り直さずに、次の条件で直した版を出してください。\n問題ではないこと（変えない）: （例: 色、全体の構成）\n問題であること: （例: 主役が2つあり、視線が分かれる）\n直し方: （例: 主役を1つに絞り、2番目の要素は大きさと明るさを今の60%にする）\n直したあと、条件のどれをどう反映したかを箇条書きで示してください。"},{"title":"自分で見直してほしい","text":"いまの出力を、厳しいレビュアーの目で見直してください。誤り・抜け・分かりにくい点を挙げ、直した版を出してください。"}],"myFields":[{"key":"name","label":"氏名"},{"key":"company","label":"会社・組織"},{"key":"dept","label":"部署"},{"key":"role","label":"役職・担当"},{"key":"context","label":"業務の前提","multiline":true,"placeholder":"例: 法人向けの分析サービス。社内の会議は月2回"},{"key":"tone","label":"文体","placeholder":"です・ます調"}]}</script>
+<script>
+// 変数の差し込みと Gem 用の指示の生成。
+// prompt-kit.html に埋め込んでブラウザで使い、tests からは require で読む。
+
+var MY_FIELDS = [
+  { key: 'name', label: '氏名' },
+  { key: 'company', label: '会社・組織' },
+  { key: 'dept', label: '部署' },
+  { key: 'role', label: '役職・担当' },
+  { key: 'context', label: '業務の前提', multiline: true, placeholder: '例: 法人向けの分析サービス。社内の会議は月2回' },
+  { key: 'tone', label: '文体', placeholder: 'です・ます調' }
+];
+
+var MY_KEYS = ['profile'].concat(MY_FIELDS.map(function (f) { return f.key; }));
+
+var ATTACHED = '（添付ファイルを参照）';
+var NOT_GIVEN = '（指定なし）';
+var VAR_RE = /\{\{\s*([A-Za-z0-9_.]+)\s*\}\}/g;
+
+var GEM_HEAD =
+  'あなたは次の作業を毎回行う専用アシスタントです。\n' +
+  '利用者は素材（テキストの貼り付けや添付ファイル）だけを送ってきます。\n' +
+  '作業に必要な素材が足りないときは、始める前に足りないものを一度にまとめて質問してください。\n\n';
+
+function trimValue(v) {
+  return typeof v === 'string' ? v.trim() : '';
+}
+
+function resolveMy(key, my) {
+  my = my || {};
+  if (key === 'profile') {
+    var lines = [];
+    MY_FIELDS.forEach(function (f) {
+      if (f.key === 'tone') return;
+      var v = trimValue(my[f.key]);
+      if (v) lines.push(f.label + ': ' + v);
+    });
+    return lines.length ? lines.join('\n') : NOT_GIVEN;
+  }
+  var v = trimValue(my[key]);
+  if (v) return v;
+  return key === 'tone' ? 'です・ます調' : NOT_GIVEN;
+}
+
+// p: { prompt, vars, example }, values: { key: string }, my: 自分の情報
+// opts.withExample: 出力例を末尾に付ける / opts.asMarkdown: md_name のあるものは Markdown で出させる
+function fillPrompt(p, values, my, opts) {
+  opts = opts || {};
+  values = values || {};
+  var varsByKey = {};
+  (p.vars || []).forEach(function (v) { varsByKey[v.key] = v; });
+  var missing = [];
+  var text = p.prompt.replace(VAR_RE, function (whole, key) {
+    if (key.indexOf('my.') === 0) return resolveMy(key.slice(3), my);
+    var v = varsByKey[key];
+    if (!v) return whole;
+    var val = trimValue(values[key]);
+    if (val) return val;
+    if (v.attachable) return ATTACHED;
+    if (v.optional) return NOT_GIVEN;
+    if (missing.indexOf(v.label) < 0) missing.push(v.label);
+    return '【' + v.label + 'を入力】';
+  });
+  return { text: text + tail(p, opts.withExample, opts.asMarkdown), missing: missing };
+}
+
+var FENCE = '```';
+var MD_NOTE =
+  '\n\n# 出力の形（Markdown ファイルとして保存する）\n' +
+  '- 出力全体を1つのコードブロックに入れる。1行目は ' + FENCE + 'markdown、最後の行は ' + FENCE + ' にする\n' +
+  '- コードブロックの外には何も書かない（前置き・後書き・補足を付けない）\n' +
+  '- ブロックの中の1行目は「# 」で始まる題名にする\n' +
+  '- 表は Markdown の表（| 区切り）、箇条書きは「- 」で書く\n' +
+  '- 1回で出し切れないときは、区切りのよい所でブロックを閉じ、ブロックの外に「続きは『続き』と送ってください」とだけ書く。続きも同じ形のブロックで出す';
+
+// 本文の後ろに付けるもの: Markdown で出す指示 → 出力例
+function tail(p, withExample, asMarkdown) {
+  var t = '';
+  if (asMarkdown && p.mdName) t += MD_NOTE;
+  if (withExample && p.example) {
+    t += '\n\n---\n# 出力例（形式の見本。内容は素材に合わせて書き直す' +
+      (asMarkdown && p.mdName ? '。実際の出力は上のとおりコードブロックに入れる' : '') + '）\n\n' + p.example;
+  }
+  return t;
+}
+
+// Gemini の出力から Markdown の中身を取り出す。
+// ```markdown / ```md の囲みがあれば中身だけ（複数あればつなぐ）、無ければ全体
+function extractMarkdown(text) {
+  var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  var blocks = [];
+  var cur = null;
+  lines.forEach(function (line) {
+    if (cur === null) {
+      if (/^\s*```\s*(markdown|md)\s*$/i.test(line)) cur = [];
+    } else if (/^\s*```\s*$/.test(line)) {
+      blocks.push(cur.join('\n'));
+      cur = null;
+    } else {
+      cur.push(line);
+    }
+  });
+  if (cur) blocks.push(cur.join('\n'));
+  var body = blocks.length ? blocks.join('\n\n') : String(text);
+  return body.replace(/^\s+|\s+$/g, '') + '\n';
+}
+
+// ファイル名に使えない文字を置き換え、末尾を .md にする
+function mdFileName(name) {
+  var base = String(name || '').replace(/[\\/:*?"<>|\r\n]+/g, '_').replace(/^\s+|\s+$/g, '').replace(/\.md$/i, '');
+  return (base || '出力') + '.md';
+}
+
+function gemText(p, my, opts) {
+  opts = opts || {};
+  if (p.gem) {
+    return p.gem.replace(VAR_RE, function (whole, key) {
+      return key.indexOf('my.') === 0 ? resolveMy(key.slice(3), my) : whole;
+    }) + (opts.asMarkdown && p.mdName ? MD_NOTE : '');
+  }
+  var varsByKey = {};
+  (p.vars || []).forEach(function (v) { varsByKey[v.key] = v; });
+  var body = p.prompt.replace(VAR_RE, function (whole, key) {
+    if (key.indexOf('my.') === 0) return resolveMy(key.slice(3), my);
+    var v = varsByKey[key];
+    return v ? '［利用者が送る「' + v.label + '」］' : whole;
+  });
+  return GEM_HEAD + body + tail(p, true, opts.asMarkdown);
+}
+
+// 本文が参照している変数の key を重複なしで返す（my.* を含む）
+function referencedKeys(text) {
+  var keys = [];
+  String(text).replace(VAR_RE, function (whole, key) {
+    if (keys.indexOf(key) < 0) keys.push(key);
+    return whole;
+  });
+  return keys;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    MY_FIELDS: MY_FIELDS,
+    MY_KEYS: MY_KEYS,
+    ATTACHED: ATTACHED,
+    NOT_GIVEN: NOT_GIVEN,
+    fillPrompt: fillPrompt,
+    gemText: gemText,
+    referencedKeys: referencedKeys,
+    extractMarkdown: extractMarkdown,
+    mdFileName: mdFileName
+  };
+}
+
+</script>
+<script>
+(function () {
+  'use strict';
+
+  // 「HTML を保存」用。描画や入力の前に、配った時点のページをそのまま控えておく（素材・保存値が混ざらない）
+  var PAGE_SOURCE = '<!doctype html>\n' + document.documentElement.outerHTML;
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var byId = new Map(DATA.prompts.map(function (p) { return [p.id, p]; }));
+  var catLabel = new Map(DATA.categories.map(function (c) { return [c.id, c.label]; }));
+  var narrow = window.matchMedia('(max-width: 860px)');
+
+  // ---- 保存（ID と自分の情報だけ。素材は保存しない）----
+  var KEYS = { fav: 'pk.fav', recent: 'pk.recent', my: 'pk.my' };
+  var RECENT_MAX = 8;
+  var FAV_SHOWN = 5;
+  function load(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw == null ? fallback : JSON.parse(raw);
+    } catch (e) { return fallback; }
+  }
+  // 書けたら true。保存できない環境（保存の禁止・容量超過）では false
+  function save(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
+  }
+  var SAVE_FAILED = 'この環境では保存できません（画面を閉じるまでは有効です）';
+  function onlyKnownIds(list) {
+    return Array.isArray(list) ? list.filter(function (id) { return byId.has(id); }) : [];
+  }
+
+  var state = {
+    fav: new Set(onlyKnownIds(load(KEYS.fav, []))),
+    recent: onlyKnownIds(load(KEYS.recent, [])),
+    my: (function () { var m = load(KEYS.my, {}); return m && typeof m === 'object' ? m : {}; })(),
+    current: null,
+    query: '',
+    withExample: true,
+    asMarkdown: true,      // md_name のあるプロンプトは Markdown で出させる
+    mdDraft: new Map(),    // プロンプト ID → 貼った出力とファイル名（メモリだけ）
+    showAllFavs: false,
+    chainCtx: null,        // { chain, index } 連鎖から開いたとき
+    values: new Map(),     // プロンプト ID → { key: 値 }（メモリだけ）
+    touched: new Map(),    // プロンプト ID → 触った欄の key の Set（未入力の表示用）
+    myOverride: new Map(), // プロンプト ID → 今回だけの自分の情報
+    openGroups: new Set()
+  };
+
+  // ---- DOM ヘルパー ----
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    if (props) {
+      Object.keys(props).forEach(function (k) {
+        var v = props[k];
+        if (v == null || v === false) return;
+        if (k === 'text') el.textContent = v;
+        else if (k === 'class') el.className = v;
+        else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+        else el.setAttribute(k, v === true ? '' : v);
+      });
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null || c === false) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x) el.append(x); });
+      else el.append(c);
+    }
+    return el;
+  }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+  var toastTimer = null;
+  function toast(msg, ms) {
+    var t = document.getElementById('toast');
+    t.textContent = '';
+    t.classList.add('show');
+    // 同じ文言でも読み上げ直されるよう、いったん空にしてから入れる
+    setTimeout(function () { t.textContent = msg; }, 30);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, ms || 3000);
+  }
+
+  function copyText(text) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.append(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      return ok;
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallback(); });
+    }
+    return Promise.resolve(fallback());
+  }
+
+  // ボタンの文言を一時的に変えて、押した結果をその場で示す
+  // 文字列をファイルとして保存する（ブラウザのダウンロード。通信はしない）
+  function downloadText(name, text, type) {
+    var url = URL.createObjectURL(new Blob([text], { type: (type || 'text/markdown') + ';charset=utf-8' }));
+    var a = h('a', { href: url, download: name, style: 'display:none' });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  }
+
+  function flashButton(btn, label) {
+    var original = btn.getAttribute('data-label') || btn.textContent;
+    btn.setAttribute('data-label', original);
+    btn.textContent = label;
+    clearTimeout(btn._flash);
+    btn._flash = setTimeout(function () { btn.textContent = original; }, 2000);
+  }
+
+  // ---- 検索 ----
+  // 全角半角・カタカナひらがなの違いを吸収する
+  function norm(s) {
+    return String(s).normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0x60);
+    });
+  }
+  function searchText(p) {
+    if (!p._head) {
+      p._head = norm([p.title, p.summary, catLabel.get(p.category)].join('\n'));
+      p._body = norm([p.prompt, p.tips].join('\n'));
+    }
+    return p;
+  }
+  function search(q) {
+    var terms = norm(q).split(/\s+/).filter(Boolean);
+    if (!terms.length) return null;
+    var scored = [];
+    DATA.prompts.forEach(function (p, i) {
+      searchText(p);
+      var score = 0;
+      var all = terms.every(function (t) {
+        if (p._head.indexOf(t) >= 0) { score += 10; return true; }
+        if (p._body.indexOf(t) >= 0) { score += 1; return true; }
+        return false;
+      });
+      if (all) scored.push({ p: p, score: score, i: i });
+    });
+    scored.sort(function (a, b) { return b.score - a.score || a.i - b.i; });
+    return scored.map(function (s) { return s.p; });
+  }
+
+  // ---- 一覧 ----
+  function itemButton(p, group) {
+    var fav = state.fav.has(p.id);
+    return h('button', {
+      class: 'item', type: 'button', 'data-key': group + ':' + p.id,
+      'aria-current': state.current === p.id ? 'true' : 'false',
+      onclick: function () { state.chainCtx = null; go('#/p/' + p.id, { focusDetail: true }); }
+    },
+      h('span', { class: 't' }, p.title,
+        fav ? h('span', { class: 'fav', 'aria-hidden': 'true', text: '★' }) : null,
+        fav ? h('span', { class: 'visually-hidden', text: '（お気に入り）' }) : null,
+        p.recommendGem ? h('span', { class: 'badge gem', text: 'Gem 向き' }) : null
+      ),
+      h('span', { class: 's', text: p.summary })
+    );
+  }
+  function groupTitle(title, count) {
+    return h('div', { class: 'group-title' }, h('span', { text: title }), h('span', { class: 'count', text: count }));
+  }
+  function renderNav() {
+    var nav = document.getElementById('nav');
+    // 作り直した後も、フォーカスのあった項目へ戻す
+    var focusedKey = nav.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
+    clear(nav);
+    var hits = search(state.query);
+    if (hits) {
+      nav.append(h('div', { class: 'group' },
+        groupTitle('検索結果', hits.length + '件'),
+        hits.length ? hits.map(function (p) { return itemButton(p, 'hit'); }) : h('p', { class: 'empty', text: '見つかりませんでした。言葉を短くしてみてください。' })
+      ));
+    } else {
+      var favs = Array.from(state.fav);
+      if (favs.length) {
+        var shown = state.showAllFavs ? favs : favs.slice(0, FAV_SHOWN);
+        nav.append(h('div', { class: 'group' },
+          groupTitle('★ お気に入り', String(favs.length)),
+          shown.map(function (id) { return itemButton(byId.get(id), 'fav'); }),
+          favs.length > FAV_SHOWN ? h('button', {
+            class: 'btn link more-favs', type: 'button', 'data-key': 'favs-toggle',
+            onclick: function () { state.showAllFavs = !state.showAllFavs; renderNav(); }
+          }, state.showAllFavs ? '少なく表示' : 'すべて表示（' + favs.length + '件）') : null
+        ));
+      }
+      if (state.recent.length) {
+        nav.append(h('div', { class: 'group' },
+          groupTitle('最近コピーした', String(state.recent.length)),
+          state.recent.map(function (id) { return itemButton(byId.get(id), 'recent'); })
+        ));
+      }
+      DATA.categories.forEach(function (c) {
+        var list = DATA.prompts.filter(function (p) { return p.category === c.id; });
+        if (!list.length) return;
+        var d = h('details', { class: 'group' },
+          h('summary', { 'data-key': 'cat:' + c.id }, h('span', { text: c.label }), h('span', { class: 'count', text: String(list.length) })),
+          list.map(function (p) { return itemButton(p, 'cat'); })
+        );
+        d.open = state.openGroups.has(c.id);
+        d.addEventListener('toggle', function () {
+          if (d.open) state.openGroups.add(c.id); else state.openGroups.delete(c.id);
+        });
+        nav.append(d);
+      });
+    }
+    if (focusedKey) {
+      var again = nav.querySelector('[data-key="' + focusedKey + '"]');
+      if (again) again.focus();
+    }
+  }
+
+  // ---- 詳細 ----
+  function effectiveMy(id) {
+    var o = state.myOverride.get(id) || {};
+    var m = {};
+    DATA.myFields.forEach(function (f) {
+      m[f.key] = Object.prototype.hasOwnProperty.call(o, f.key) ? o[f.key] : (state.my[f.key] || '');
+    });
+    return m;
+  }
+  function usesMy(p) {
+    return referencedKeys(p.prompt).concat(referencedKeys(p.gem || '')).some(function (k) { return k.indexOf('my.') === 0; });
+  }
+  function valuesOf(id) {
+    if (!state.values.has(id)) state.values.set(id, {});
+    return state.values.get(id);
+  }
+  function touchedOf(id) {
+    if (!state.touched.has(id)) state.touched.set(id, new Set());
+    return state.touched.get(id);
+  }
+  function isRequired(v) { return !v.optional && !v.attachable; }
+  function nextSteps(id) {
+    var out = [];
+    DATA.chains.forEach(function (c) {
+      var i = c.steps.indexOf(id);
+      if (i >= 0 && i < c.steps.length - 1) out.push({ chain: c, index: i + 1, next: byId.get(c.steps[i + 1]) });
+    });
+    return out;
+  }
+  // 前の出力を貼る欄: 添付できる欄 → 複数行の欄 → 最初の欄
+  function mainField(p) {
+    return p.vars.filter(function (v) { return v.attachable; })[0]
+      || p.vars.filter(function (v) { return v.multiline; })[0]
+      || p.vars[0];
+  }
+
+  function followupBlock(f) {
+    var btn = h('button', { class: 'btn small', type: 'button', 'aria-label': '「' + f.title + '」をコピー' }, 'コピー');
+    btn.addEventListener('click', function () {
+      copyText(f.text).then(function (ok) {
+        if (ok) { flashButton(btn, 'コピーしました ✓'); toast('追い指示をコピーしました。Gemini の同じ会話に続けて貼ってください'); }
+        else toast('コピーできませんでした。文を選んで Ctrl+C でコピーしてください', 8000);
+      });
+    });
+    return h('div', { class: 'fu' },
+      h('div', { class: 'fu-head' }, h('strong', { text: f.title }), btn),
+      h('p', { text: f.text })
+    );
+  }
+
+  function renderDetail(opts) {
+    opts = opts || {};
+    var box = document.getElementById('detail');
+    clear(box);
+    var p = byId.get(state.current);
+    if (!p) { box.append(welcome()); return; }
+    var values = valuesOf(p.id);
+    var touched = touchedOf(p.id);
+
+    var preview = h('pre', { class: 'preview', tabindex: '0', 'aria-label': '完成したプロンプト' });
+    var warn = h('div', { class: 'warn', role: 'status', hidden: true });
+    var chars = h('span', { class: 'chars' });
+    var copyFailed = false;
+    function update() {
+      var r = fillPrompt(p, values, effectiveMy(p.id), { withExample: state.withExample, asMarkdown: state.asMarkdown });
+      preview.textContent = r.text;
+      chars.textContent = r.text.length.toLocaleString() + '文字';
+      updateGem();
+      // 未入力の警告は、触った欄かコピーを試した後だけ出す
+      var missing = p.vars.filter(function (v) {
+        return isRequired(v) && !(values[v.key] || '').trim() && (touched.has(v.key) || touched.has('*'));
+      }).map(function (v) { return v.label; });
+      var msgs = [];
+      if (copyFailed) msgs.push('コピーできませんでした。下の文を選択した状態にしたので、Ctrl+C でコピーしてください。');
+      if (missing.length) msgs.push('未入力: ' + missing.join('、') + '（このままでもコピーできます）');
+      warn.hidden = !msgs.length;
+      warn.textContent = msgs.join(' ');
+      return r;
+    }
+
+    // 連鎖から来たときの案内
+    var banner = null;
+    if (state.chainCtx && state.chainCtx.chain.steps[state.chainCtx.index] === p.id) {
+      var c = state.chainCtx.chain;
+      var idx = state.chainCtx.index;
+      var prev = idx > 0 ? byId.get(c.steps[idx - 1]) : null;
+      var field = mainField(p);
+      banner = h('div', { class: 'chain-banner' },
+        h('p', null,
+          h('strong', { text: '連鎖「' + c.name + '」 STEP ' + (idx + 1) + ' / ' + c.steps.length }),
+          prev && field ? '　前の「' + prev.title + '」の出力を「' + field.label + '」欄に貼ります。' : ''
+        ),
+        h('button', { class: 'btn link', type: 'button', onclick: function () { go('#/chains'); } }, '連鎖の一覧に戻る')
+      );
+    }
+
+    // 1. 素材
+    var fields = p.vars.map(function (v) {
+      var id = 'v-' + p.id + '-' + v.key;
+      var input = v.multiline
+        ? h('textarea', { id: id, placeholder: v.placeholder || (v.attachable ? '貼り付けるか、空欄のまま Gemini にファイルを添付' : '') })
+        : h('input', { id: id, type: 'text', placeholder: v.placeholder || '' });
+      input.value = values[v.key] || '';
+      input.addEventListener('input', function () { values[v.key] = input.value; update(); });
+      input.addEventListener('blur', function () { touched.add(v.key); update(); });
+      var badge = v.attachable ? h('span', { class: 'badge att', text: '空欄なら添付を参照' })
+        : v.optional ? h('span', { class: 'badge', text: '任意' })
+        : h('span', { class: 'badge req', text: '必須' });
+      return h('div', { class: 'field' }, h('label', { for: id }, v.label, badge), input);
+    });
+    var myBox = null;
+    if (usesMy(p)) {
+      var o = state.myOverride.get(p.id) || {};
+      state.myOverride.set(p.id, o);
+      var my = effectiveMy(p.id);
+      myBox = h('details', { class: 'my-box' },
+        h('summary', { text: '自分の情報（このプロンプトだけ変えられます。保存はされません）' }),
+        DATA.myFields.map(function (f) {
+          var id = 'm-' + p.id + '-' + f.key;
+          var input = f.multiline ? h('textarea', { id: id, placeholder: f.placeholder || '' }) : h('input', { id: id, type: 'text', placeholder: f.placeholder || '' });
+          input.value = my[f.key] || '';
+          input.addEventListener('input', function () { o[f.key] = input.value; update(); });
+          return h('div', { class: 'field' }, h('label', { for: id, text: f.label }), input);
+        }),
+        h('p', { class: 'hint' }, 'いつもの値は右上の「自分の情報」で保存できます。')
+      );
+    }
+    var clearInputs = p.vars.length ? h('button', {
+      class: 'btn small', type: 'button',
+      onclick: function () {
+        state.values.delete(p.id);
+        state.touched.delete(p.id);
+        state.myOverride.delete(p.id);
+        state.mdDraft.delete(p.id);
+        renderDetail();
+        toast('このプロンプトの入力を消しました');
+      }
+    }, '入力を消す') : null;
+    var step1 = h('section', { class: 'card' },
+      h('h3', null, h('span', { class: 'num', text: '1' }), h('span', { class: 'grow', text: '素材を入れる' }), clearInputs),
+      fields.length ? fields : h('p', { class: 'hint', text: 'このプロンプトは入力欄がありません。そのままコピーして使います。' }),
+      myBox
+    );
+
+    // 2. コピー
+    var exampleToggle = null;
+    if (p.example) {
+      var cb = h('input', { type: 'checkbox' });
+      cb.checked = state.withExample;
+      cb.addEventListener('change', function () { state.withExample = cb.checked; update(); });
+      exampleToggle = h('label', { class: 'check' }, cb, '出力例を含める（形式がぶれにくくなる）');
+    }
+    var mdToggle = null;
+    if (p.mdName) {
+      var mdCb = h('input', { type: 'checkbox' });
+      mdCb.checked = state.asMarkdown;
+      mdCb.addEventListener('change', function () { state.asMarkdown = mdCb.checked; update(); });
+      mdToggle = h('label', { class: 'check' }, mdCb, 'Markdown（.md）で出力させる');
+    }
+    function selectPreview() {
+      var range = document.createRange();
+      range.selectNodeContents(preview);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    var copyBtn = h('button', { class: 'btn primary', type: 'button', id: 'copy-prompt', 'aria-keyshortcuts': 'Control+Enter' }, 'プロンプトをコピー');
+    copyBtn.addEventListener('click', function () {
+      touched.add('*');
+      var r = update();
+      copyText(r.text).then(function (ok) {
+        copyFailed = !ok;
+        update();
+        if (!ok) { selectPreview(); toast('コピーできませんでした。選択した部分を Ctrl+C でコピーしてください', 8000); return; }
+        flashButton(copyBtn, 'コピーしました ✓');
+        pushRecent(p.id);
+        toast(r.missing.length ? 'コピーしました（未入力: ' + r.missing.join('、') + '）' : 'コピーしました。Gemini に貼ってください');
+      });
+    });
+    var gemBtn = h('button', { class: 'btn', type: 'button' }, 'Gem 用をコピー');
+    gemBtn.addEventListener('click', function () {
+      copyText(gemText(p, effectiveMy(p.id), { asMarkdown: state.asMarkdown })).then(function (ok) {
+        if (ok) { flashButton(gemBtn, 'コピーしました ✓'); toast('Gem 用の指示をコピーしました。Gem の指示の欄に貼ってください'); }
+        else toast('コピーできませんでした', 8000);
+      });
+    });
+    var step2 = h('section', { class: 'card' },
+      h('h3', null, h('span', { class: 'num', text: '2' }), 'コピーして Gemini に貼る'),
+      h('div', { class: 'toolbar' }, copyBtn, h('span', { class: 'hint kbd-hint', text: 'Ctrl+Enter でもコピー' }), h('span', { class: 'grow' }), mdToggle, exampleToggle),
+      warn,
+      preview,
+      h('div', { class: 'toolbar', style: 'margin:10px 0 0' }, chars)
+    );
+
+    // 出力を .md で保存（貼った出力はメモリだけ。保存はユーザーが押したときだけ）
+    var mdCard = null;
+    if (p.mdName) {
+      if (!state.mdDraft.has(p.id)) state.mdDraft.set(p.id, { text: '', name: p.mdName + '_' + today() });
+      var draft = state.mdDraft.get(p.id);
+      var outId = 'md-out-' + p.id;
+      var nameId = 'md-name-' + p.id;
+      var outBox = h('textarea', { id: outId, placeholder: 'Gemini の出力を貼る（```markdown の囲みごと貼っても自動で外します）' });
+      outBox.value = draft.text;
+      outBox.addEventListener('input', function () { draft.text = outBox.value; });
+      var nameBox = h('input', { id: nameId, type: 'text' });
+      nameBox.value = draft.name;
+      nameBox.addEventListener('input', function () { draft.name = nameBox.value; });
+      var saveBtn = h('button', { class: 'btn primary', type: 'button' }, '.md で保存');
+      saveBtn.addEventListener('click', function () {
+        if (!outBox.value.trim()) { toast('先に Gemini の出力を貼ってください', 4000); outBox.focus(); return; }
+        var name = mdFileName(nameBox.value);
+        downloadText(name, extractMarkdown(outBox.value));
+        flashButton(saveBtn, '保存しました ✓');
+        toast(name + ' を保存しました（ブラウザのダウンロード先）', 4000);
+      });
+      mdCard = h('section', { class: 'card' },
+        h('h3', { text: 'Gemini の出力を .md で保存' }),
+        h('p', { class: 'hint', style: 'margin:0 0 12px' }, 'Gemini の出力のコードブロック右上にあるコピーボタンでコピーし、ここに貼って保存します。'),
+        h('div', { class: 'field' }, h('label', { for: outId, text: 'Gemini の出力' }), outBox),
+        h('div', { class: 'field' }, h('label', { for: nameId, text: 'ファイル名' }), nameBox),
+        h('div', { class: 'toolbar' }, saveBtn)
+      );
+    }
+
+    // Gem 用（普通のプロンプトとは分けて置く）
+    var gemPreview = h('pre', { class: 'preview', tabindex: '0', 'aria-label': 'Gem 用の指示' });
+    var gemChars = h('span', { class: 'chars' });
+    function updateGem() {
+      var t = gemText(p, effectiveMy(p.id), { asMarkdown: state.asMarkdown });
+      gemPreview.textContent = t;
+      gemChars.textContent = t.length.toLocaleString() + '文字';
+    }
+    var sendList = p.vars.length ? h('ul', { class: 'send-list' }, p.vars.map(function (v) {
+      return h('li', null, v.label,
+        v.attachable ? h('span', { class: 'badge att', text: '添付でも可' }) : v.optional ? h('span', { class: 'badge', text: '任意' }) : null);
+    })) : h('p', { class: 'hint', text: '送る素材はありません。Gem を開いて「お願いします」と送るだけで使えます。' });
+    var gemCard = h('details', { class: 'card gem-card' },
+      h('summary', null,
+        h('span', { class: 'gem-title', text: 'Gem に登録して使う場合' }),
+        p.recommendGem ? h('span', { class: 'badge gem', text: 'Gem 向き' }) : null,
+        h('span', { class: 'hint gem-sub', text: '毎週のように使うなら、一度登録すれば素材を送るだけで済みます' })
+      ),
+      h('ol', { class: 'gem-steps' },
+        h('li', null, '下の「Gem 用をコピー」を押す'),
+        h('li', null, 'Gemini の Gem の管理画面で新しい Gem を作り、指示の欄に貼って保存する'),
+        h('li', null, '使うときは、その Gem を開いて下の「Gem に送るもの」を送る')
+      ),
+      h('div', { class: 'fu-label', text: 'Gem に送るもの（毎回）' }),
+      sendList,
+      h('div', { class: 'toolbar', style: 'margin-top:14px' }, gemBtn, h('span', { class: 'grow' }), gemChars),
+      h('p', { class: 'hint', style: 'margin:0 0 8px' }, '普通のプロンプトとの違い: 入力欄の素材は入らず、「利用者が送る◯◯」と書かれます。自分の情報だけが入ります。'),
+      gemPreview
+    );
+    gemCard.open = !!p.recommendGem;
+
+    // 3. うまくいかないとき
+    var fus = h('section', { class: 'card' },
+      h('h3', null, h('span', { class: 'num', text: '3' }), 'うまくいかないときの追い指示'),
+      h('p', { class: 'hint', text: '出力を見て、当てはまるものを Gemini の同じ会話に続けて送ります。' }),
+      p.followups.length ? h('div', { class: 'fu-label', text: 'このプロンプト用' }) : null,
+      p.followups.map(followupBlock),
+      DATA.followups.length ? h('details', { class: 'more' },
+        h('summary', { text: '共通の追い指示（' + DATA.followups.length + '件）' }),
+        DATA.followups.map(followupBlock)
+      ) : null
+    );
+
+    var exampleCard = p.example ? h('section', { class: 'card' },
+      h('details', { class: 'more' }, h('summary', { text: '出力例を見る' }), h('pre', { class: 'preview', text: p.example }))
+    ) : null;
+
+    var tipsCard = h('section', { class: 'card' },
+      h('h3', { text: '使い方のコツ' }),
+      h('p', { class: 'tips', text: p.tips })
+    );
+
+    var nexts = nextSteps(p.id);
+    var nextCard = nexts.length ? h('section', { class: 'card' },
+      h('h3', { text: '次に使う' }),
+      h('div', { class: 'next-list' }, nexts.map(function (n) {
+        return h('button', {
+          class: 'next', type: 'button',
+          onclick: function () { state.chainCtx = { chain: n.chain, index: n.index }; go('#/p/' + n.next.id, { focusDetail: true }); }
+        },
+          h('span', { style: 'flex:1' },
+            h('span', { class: 'via', text: '連鎖「' + n.chain.name + '」 STEP ' + (n.index + 1) + ' / ' + n.chain.steps.length }),
+            h('strong', { text: n.next.title })
+          ),
+          h('span', { class: 'arrow', 'aria-hidden': 'true', text: '→' })
+        );
+      }))
+    ) : null;
+
+    var star = h('button', {
+      class: 'star', type: 'button', 'aria-pressed': state.fav.has(p.id) ? 'true' : 'false',
+      onclick: function () {
+        if (state.fav.has(p.id)) state.fav.delete(p.id); else state.fav.add(p.id);
+        var ok = save(KEYS.fav, Array.from(state.fav));
+        star.setAttribute('aria-pressed', state.fav.has(p.id) ? 'true' : 'false');
+        starIcon.textContent = state.fav.has(p.id) ? '★' : '☆';
+        if (!ok) toast(SAVE_FAILED, 6000);
+        renderNav();
+      }
+    });
+    var starIcon = h('span', { 'aria-hidden': 'true', text: state.fav.has(p.id) ? '★' : '☆' });
+    star.append(starIcon, ' お気に入り');
+
+    var firstTip = p.tips.split('\n')[0];
+    [
+      h('button', { class: 'btn back', type: 'button', onclick: function () { document.getElementById('search').scrollIntoView({ block: 'start' }); document.getElementById('search').focus(); } }, '← 一覧に戻る'),
+      h('p', { class: 'crumb' }, catLabel.get(p.category),
+        p.recommendGem ? h('span', { class: 'badge gem', title: '毎回使うなら Gem に登録すると、素材を送るだけで済みます', text: 'Gem 向き' }) : null),
+      h('div', { class: 'title-row' }, h('h2', { tabindex: '-1', id: 'detail-title', text: p.title }), star),
+      h('p', { class: 'lead', text: p.summary }),
+      h('p', { class: 'tip-line' }, h('strong', { text: 'コツ: ' }), firstTip),
+      banner, step1, step2, mdCard, gemCard, fus, exampleCard, tipsCard, nextCard
+    ].forEach(function (el) { if (el) box.append(el); });
+    update();
+    if (opts.focus) {
+      var title = document.getElementById('detail-title');
+      if (narrow.matches) title.scrollIntoView({ block: 'start' });
+      title.focus({ preventScroll: true });
+    }
+  }
+
+  function welcome() {
+    var picks = ['minutes', 'doc-known-unknown', 'ppt-outline', 'html-design-improve'].filter(function (id) { return byId.has(id); });
+    return h('div', null,
+      h('p', { class: 'crumb', text: 'はじめに' }),
+      h('div', { class: 'title-row' }, h('h2', { text: '左の一覧からプロンプトを選んでください' })),
+      h('p', { class: 'lead', text: '素材を入れてコピーし、Gemini に貼るだけで使えます。初めての方は「使い方」タブもご覧ください。' }),
+      picks.length ? h('section', { class: 'card' },
+        h('h3', { text: 'よく使うもの' }),
+        h('div', { class: 'next-list' }, picks.map(function (id) {
+          var p = byId.get(id);
+          return h('button', { class: 'next', type: 'button', onclick: function () { go('#/p/' + id, { focusDetail: true }); } },
+            h('span', { style: 'flex:1' }, h('span', { class: 'via', text: catLabel.get(p.category) }), h('strong', { text: p.title })),
+            h('span', { class: 'arrow', 'aria-hidden': 'true', text: '→' })
+          );
+        }))
+      ) : null
+    );
+  }
+
+  function pushRecent(id) {
+    state.recent = [id].concat(state.recent.filter(function (x) { return x !== id; })).slice(0, RECENT_MAX);
+    if (!save(KEYS.recent, state.recent)) toast(SAVE_FAILED, 6000);
+    if (!state.query) renderNav();
+  }
+
+  // ---- 連鎖 ----
+  function renderChains() {
+    var box = document.getElementById('chains');
+    clear(box);
+    if (!DATA.chains.length) { box.append(h('p', { class: 'empty', text: '連鎖はまだありません。' })); return; }
+    DATA.chains.forEach(function (c) {
+      box.append(h('section', { class: 'card chain' },
+        h('h3', { text: c.name }),
+        c.description ? h('p', { class: 'desc', text: c.description }) : null,
+        h('ol', { class: 'steps' }, c.steps.map(function (id, i) {
+          var p = byId.get(id);
+          return h('li', null, h('button', {
+            class: 'step', type: 'button',
+            onclick: function () { state.chainCtx = { chain: c, index: i }; go('#/p/' + id, { focusDetail: true }); }
+          },
+            h('span', { class: 'n', text: 'STEP ' + (i + 1) }),
+            h('span', { class: 't', text: p.title })
+          ));
+        }))
+      ));
+    });
+  }
+
+  // ---- 自分の情報 ----
+  var dialog = document.getElementById('settings');
+  var settingInputs = {};
+  function openSettings() {
+    var box = document.getElementById('settings-fields');
+    clear(box);
+    DATA.myFields.forEach(function (f) {
+      var id = 's-' + f.key;
+      var input = f.multiline ? h('textarea', { id: id, placeholder: f.placeholder || '' }) : h('input', { id: id, type: 'text', placeholder: f.placeholder || '' });
+      input.value = state.my[f.key] || '';
+      settingInputs[f.key] = input;
+      box.append(h('div', { class: 'field' }, h('label', { for: id, text: f.label }), input));
+    });
+    disarmClear();
+    dialog.showModal();
+  }
+  document.getElementById('open-settings').addEventListener('click', openSettings);
+  document.getElementById('settings-cancel').addEventListener('click', function () { dialog.close(); });
+  document.getElementById('settings-form').addEventListener('submit', function () {
+    var m = {};
+    DATA.myFields.forEach(function (f) {
+      var v = settingInputs[f.key].value.trim();
+      if (v) m[f.key] = v;
+    });
+    state.my = m;
+    // プロンプトごとに今回だけ変えた値は残す（変えていない項目にだけ新しい既定値が効く）
+    toast(save(KEYS.my, m) ? '自分の情報を保存しました' : SAVE_FAILED, 4000);
+    if (state.current) renderDetail();
+  });
+  var clearBtn = document.getElementById('clear-storage');
+  var armed = false;
+  function disarmClear() {
+    armed = false;
+    clearBtn.classList.remove('armed');
+    clearBtn.textContent = '保存した値と入力をすべて消す';
+  }
+  clearBtn.addEventListener('click', function () {
+    if (!armed) {
+      armed = true;
+      clearBtn.classList.add('armed');
+      clearBtn.textContent = 'もう一度押すと消えます';
+      return;
+    }
+    try { Object.keys(KEYS).forEach(function (k) { localStorage.removeItem(KEYS[k]); }); } catch (e) { /* 保存できない環境では消すものも無い */ }
+    state.fav.clear();
+    state.recent = [];
+    state.my = {};
+    state.values.clear();
+    state.touched.clear();
+    state.myOverride.clear();
+    state.mdDraft.clear();
+    dialog.close();
+    toast('お気に入り・最近使ったもの・自分の情報・入力中の素材を消しました', 4000);
+    renderNav();
+    if (state.current) renderDetail();
+  });
+
+  // ---- ルーティング ----
+  var pendingFocus = false;
+  function go(hash, opts) {
+    pendingFocus = !!(opts && opts.focusDetail);
+    if (location.hash === hash) route(); else location.hash = hash;
+  }
+  function showTab(name) {
+    ['prompts', 'chains', 'guide'].forEach(function (t) {
+      document.getElementById('tab-' + t).hidden = t !== name;
+      var b = document.getElementById('tab-btn-' + t);
+      if (t === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+  }
+  function resetScroll(el) {
+    if (el) el.scrollTop = 0;
+    document.querySelector('main').scrollTop = 0;
+  }
+  function route() {
+    var hash = location.hash || '';
+    var focus = pendingFocus;
+    pendingFocus = false;
+    var m;
+    if ((m = hash.match(/^#\/p\/([a-z0-9-]+)$/)) && byId.has(m[1])) {
+      showTab('prompts');
+      if (state.chainCtx && state.chainCtx.chain.steps[state.chainCtx.index] !== m[1]) state.chainCtx = null;
+      state.current = m[1];
+      state.openGroups.add(byId.get(m[1]).category);
+      renderNav();
+      if (!narrow.matches) resetScroll(document.querySelector('#tab-prompts .content'));
+      renderDetail({ focus: focus });
+      var cur = document.querySelector('#nav .item[aria-current="true"]');
+      if (cur && !narrow.matches) cur.scrollIntoView({ block: 'nearest' });
+    } else if (hash === '#/chains') {
+      showTab('chains');
+      resetScroll(document.querySelector('#tab-chains .content'));
+    } else if ((m = hash.match(/^#\/guide(?:\/(g-\d+))?$/))) {
+      showTab('guide');
+      var target = m[1] ? document.getElementById(m[1]) : null;
+      if (target) target.scrollIntoView({ block: 'start' });
+      else resetScroll(document.getElementById('guide-scroll'));
+    } else {
+      showTab('prompts');
+      state.current = null;
+      state.chainCtx = null;
+      renderNav();
+      renderDetail();
+    }
+  }
+  document.querySelectorAll('.tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = b.getAttribute('data-tab');
+      if (t === 'prompts') go(state.current ? '#/p/' + state.current : '#/');
+      else go('#/' + t);
+    });
+  });
+  // 目次は同じ項目を2回押しても移動するよう、go() を通す
+  document.querySelectorAll('.toc a').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      go(a.getAttribute('href'));
+    });
+  });
+  window.addEventListener('hashchange', route);
+  document.getElementById('save-html').addEventListener('click', function () {
+    downloadText('prompt-kit.html', PAGE_SOURCE, 'text/html');
+  });
+
+  var searchBox = document.getElementById('search');
+  searchBox.addEventListener('input', function () { state.query = searchBox.value; renderNav(); });
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target && e.target.tagName) || '';
+    // 素材を入れた手のまま、Ctrl+Enter（Mac は ⌘+Enter）でコピーする
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !dialog.open && !document.getElementById('tab-prompts').hidden) {
+      var btn = document.getElementById('copy-prompt');
+      if (btn) { e.preventDefault(); btn.click(); }
+      return;
+    }
+    if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA' && !dialog.open) {
+      e.preventDefault();
+      if (!document.getElementById('tab-prompts').hidden) searchBox.focus();
+      else { go(state.current ? '#/p/' + state.current : '#/'); setTimeout(function () { searchBox.focus(); }, 0); }
+    }
+  });
+
+  if (!state.openGroups.size && DATA.categories.length) state.openGroups.add(DATA.categories[0].id);
+  renderChains();
+  route();
+})();
+</script>
+</body>
+</html>
